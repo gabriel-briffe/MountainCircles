@@ -1,0 +1,31 @@
+name: everything 
+
+input_files:
+  airfield_file: ./data/airfields/terrains4326.txt
+  topography_file: ./data/topography/alosalpscustomLCC100m.asc
+  result_folder: ./results/everything
+  compute: ./compute
+  mapcssTemplate: ./templates/mapcss.mapcss
+
+conda_path: /opt/anaconda3/bin/conda
+conda_gdal_env: qgis
+
+CRS:
+  name: 100001
+  definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
+
+glide_parameters:
+  glide_ratio: 25
+  ground_clearance: 100
+  circuit_height: 200
+
+calculation_parameters:
+  max_altitude: 4200
+
+rendering:
+  contour_height: 100
+
+gurumaps: true
+reset_results: true
+
+merged_output_name: merged_output

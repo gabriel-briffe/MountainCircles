@@ -1,0 +1,29 @@
+node|z6- {
+    width: 15pt;
+    color: red;
+    icon-image: "poi_circle.svg";
+    icon-tint: DarkRed;
+}
+
+node|z6- {
+    text: eval(tag('name'));
+    text-color: DarkRed;
+    font-weight:normal;
+    font-size:11;
+    font-stroke-width:4pt;
+    font-stroke-color: white;
+}
+
+line|z9- {
+    width: 1pt;
+    color: black;
+}
+
+line|z10- {
+    text: eval(tag('ELEV'));
+    text-color: black;
+    font-weight:normal;
+    font-size:11;
+    font-stroke-width:4pt;
+    font-stroke-color: white;
+}
