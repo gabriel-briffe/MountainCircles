@@ -25,7 +25,7 @@ calculation_parameters:
 rendering:
   contour_height: 100
 
-gurumaps: false
-reset_results: true
+gurumaps: true
+reset_results: false
 
 merged_output_name: merged_output
