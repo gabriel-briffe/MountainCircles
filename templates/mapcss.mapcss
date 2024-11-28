@@ -1,11 +1,11 @@
-node|z6- {
-    width: 15pt;
+node|z7- {
+    width: 12pt;
     color: red;
     icon-image: "poi_circle.svg";
     icon-tint: DarkRed;
 }
 
-node|z6- {
+node|z8- {
     text: eval(tag('name'));
     text-color: DarkRed;
     font-weight:normal;

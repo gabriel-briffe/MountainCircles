@@ -1,11 +1,17 @@
+import os
+import csv
+import json
+from typing import Dict, Any
 from typing import List
 from pyproj import Transformer
+
 
 
 def read_airfields(filename: str) -> List[List]:
     airfields = []
     with open(filename, 'r') as file:
         print("reading airfields")
+        next(file)        # Skip the header line
         for line in file:
             parts = line.split(",")
             if len(parts) == 3:
@@ -24,6 +30,37 @@ def convert_airfields(airfields4326,CRS):
     return converted_airfields
 
 
+def csv_to_geojson(config):
+    # Extract base filename without extension
+    base_filename = config.name
+    output_dir = os.path.join(config.result_folder_path, 'airfields')
+    geojson_file_path = os.path.join(output_dir, f"{base_filename}.geojson")
+
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Initialize GeoJSON structure
+    # Initialize GeoJSON structure with the specified format
+    geojson = {
+        "type": "FeatureCollection",
+        "name": "OGRGeoJSON",  # You might want to change this to something more appropriate for airfields
+        "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }},
+        "features": []
+    }
+
+    with open(config.airfield_file_path, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            # Create a feature for each row in CSV
+            feature = {"type": "Feature","properties": { "name": row['name']} , "geometry": { "type": "Point", "coordinates": [float(row['x']),float(row['y'])] }}
+            geojson['features'].append(feature)
+
+    # Write the GeoJSON to file
+    with open(geojson_file_path, 'w') as geojson_file:
+        json.dump(geojson, geojson_file, indent=2)
+
+    print(f"GeoJSON file created at: {geojson_file_path}")
+
 
 class Airfield:
     def __init__(self, parts):
@@ -37,5 +74,6 @@ class Airfields4326:
     def __init__(self, config):
         self.filePath = config.airfield_file_path  
         self.destinationCRS = config.CRS  
-        self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)  
+        self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
+        csv_to_geojson(config)
 

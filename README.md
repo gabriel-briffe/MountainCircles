@@ -48,6 +48,7 @@ python launch.py albertville.yaml
 ### With ```gurumaps: true``` in the yaml config file, it will provide as well:
 - a geojson conversion of the contour lines for all output, in the right CRS for Guru Maps
 - a .mapcss style file of the same name
+- names ending with _airfields also have airfields to display
 - copy the two files (with the same names beyond the extension) on your smartphone, and share them with Guru Maps
 - i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
 
@@ -58,7 +59,7 @@ python launch.py albertville.yaml
 
 # to do next
 
-- add airfields, peaks, and passes, to the geojson
+- add peaks, and passes, to the geojson
 - add mapcss styles for that
 - see if polygon export is viable in the geojson to color the map for each airfield
 - add the ability to choose different glide/ground clearance/circuit height for each airfield

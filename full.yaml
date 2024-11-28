@@ -1,7 +1,7 @@
 name: everything 
 
 input_files:
-  airfield_file: ./data/airfields/full4326.txt
+  airfield_file: ./data/airfields/full4326.csv
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/everything
   compute: ./compute

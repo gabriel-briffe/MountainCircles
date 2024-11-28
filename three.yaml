@@ -1,7 +1,7 @@
 name: three 
 
 input_files:
-  airfield_file: ./data/airfields/three.txt
+  airfield_file: ./data/airfields/three.csv
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/three
   compute: ./compute
@@ -20,12 +20,12 @@ glide_parameters:
   circuit_height: 100
 
 calculation_parameters:
-  max_altitude: 4000
+  max_altitude: 800
 
 rendering:
   contour_height: 100
 
-gurumaps: false
+gurumaps: true
 reset_results: true
 
 merged_output_name: merged_output
