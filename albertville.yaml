@@ -16,16 +16,16 @@ CRS:
 
 glide_parameters:
   glide_ratio: 25
-  ground_clearance: 100
-  circuit_height: 200
+  ground_clearance: 0
+  circuit_height: 0
 
 calculation_parameters:
-  max_altitude: 700
+  max_altitude: 3000
 
 rendering:
   contour_height: 100
 
-gurumaps: true
+gurumaps: false
 reset_results: true
 
 merged_output_name: merged_output

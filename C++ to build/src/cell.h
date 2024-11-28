@@ -14,7 +14,9 @@ class Cell {
         size_t oj =0;    
         size_t i;
         size_t j;
+        size_t weight =0;
         bool ground = false;
+        bool mountain_pass = false;
 
         Cell(int elev = 0, size_t row = 0, size_t col = 0) : elevation(elev), i(row), j(col) {}
 

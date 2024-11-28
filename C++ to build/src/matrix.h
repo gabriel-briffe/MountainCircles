@@ -132,7 +132,7 @@ public:
                 oj_elected=parent.j;
             }
 
-            if(oi_elected==cell.oi && oj_elected==cell.oj){continue;}  //cas où le test de la cellule déja calculée s'est fait, avec plusieurs origines autours, mais qui ne change rien
+            if(oi_elected==cell.oi && oj_elected==cell.oj){continue;} 
             bool updated;
             updated = cell.calculate(this->mat, oi_elected, oj_elected, params);
 
@@ -140,6 +140,11 @@ public:
             if (updated){
                 auto new_neighbours = neighbours_with_different_origin_for_stack(i, j);
                 stack.insert(stack.end(), new_neighbours.begin(), new_neighbours.end());
+                // if (parent.ground && !cell.ground){
+                //     cell.mountain_pass = true;
+                // } else {
+                //     cell.mountain_pass = false;
+                // }
             }
         }
     }
@@ -231,7 +236,75 @@ public:
         } else {
             cerr << "Unable to open file " << destinationFile << " for writing." << endl;
         }
-}
+    }
+
+    void detect_passes(Params& params) {
+        for (size_t i = 0; i < this->nrows; ++i) {
+            for (size_t j = 0; j < this->ncols; ++j) {
+                Cell& cell = this->mat[i][j];
+                Cell& origin = this->mat[cell.oi][cell.oj];
+                if (origin.ground && !cell.ground){
+                    cell.mountain_pass = true;
+                } else {
+                    cell.mountain_pass = false;
+                }
+            }
+
+        }
+    }
+
+
+    void weight_passes(Params& params) {
+        for (size_t i = 0; i < this->nrows; ++i) {
+            for (size_t j = 0; j < this->ncols; ++j) {
+                Cell& cell = this->mat[i][j];
+                update_cell_weight(cell,params);
+            }
+
+        }
+    }
+
+
+    void update_cell_weight(Cell& cell, Params& params, size_t max_depth = 1000) {
+        if (max_depth == 0) {
+            throw std::runtime_error("Maximum recursion depth reached.");
+        }
+
+        Cell& origin = this->mat[cell.oi][cell.oj];
+        origin.weight++;
+
+        // Check if we should continue recursion
+        if (!origin.ground && (origin.i!=cell.i || origin.j!=cell.j)) { 
+            update_cell_weight(origin, params, max_depth - 1);
+        }
+    }
+
+    void write_mountain_passes(const Params& params, const string& destinationFile) const {
+        ofstream outputFile(destinationFile);
+        
+        if (outputFile.is_open()) {
+            outputFile <<"name,x,y,weight"<<endl;
+            // Write the data
+            for (size_t i = 0; i < this->nrows; ++i) {
+                for (size_t j = 0; j < this->ncols; ++j) {
+                    const Cell& cell = this->mat[i][j];
+                    const Cell& origine = this->mat[cell.oi][cell.oj];
+                    const Cell& oorigine = this->mat[origine.oi][origine.oj];
+                    if (cell.mountain_pass && cell.weight>100 && oorigine.ground ){
+                        outputFile <<"pass,"<< params.xllcorner + (this->start_j+cell.j) * params.cellsize_m <<","
+                        << params.yllcorner + (params.global_nrows - 1 -this->start_i - cell.i) * params.cellsize_m <<","
+                        << cell.weight <<endl;
+
+                    }
+                }
+
+            }
+
+            outputFile.close();
+        } else {
+            cerr << "Unable to open file " << destinationFile << " for writing." << endl;
+        }
+    }
 
 };
 

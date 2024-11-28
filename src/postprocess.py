@@ -78,10 +78,6 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
             print("Error output:", result.stderr)
             print("Standard output:", result.stdout)      
 
-        # Run the command without output
-        # with open(os.devnull, 'w') as devnull:
-        #     subprocess.run(command, stdout=devnull, stderr=devnull, check=True)
-        # print(f"Contours converted to GeoJSON in EPSG:3857 at {geojson_path}")
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while converting contours: {e}")
         print("Error output:", e.stderr)
@@ -90,37 +86,6 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
-
-# def merge_geojson_files(inThisFolder, config, contourFileName):
-#     """
-#     Merge the GeoJSON files for contours and airfields.
-    
-#     This function assumes that you want to merge all features from both GeoJSON files.
-#     """
-#     try:
-#         geojson_airfields_path = os.path.join(config.result_folder_path, "airfields", f"{config.name}.geojson")
-#         geojson_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
-#         merged_geojson_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_airfields.geojson')
-
-#         conda_path = config.conda_path  
-#         gdal_env = config.conda_gdal_env
-        
-#         cmd = [
-#             conda_path, "run", "-n", gdal_env, "ogr2ogr",
-#             "-f", "GeoJSON",
-#             merged_geojson_path,
-#             geojson_airfields_path,
-#             geojson_path
-#         ]
-    
-#         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-#         print(f"GeoJSON files merged successfully. Output file: {merged_geojson_path}")
-#     except subprocess.CalledProcessError as e:
-#         print(f"An error occurred while merging GeoJSON files: {e}")
-#         print("Error output:", e.stderr)
-#         print("Standard output:", e.stdout)
-#     except Exception as e:
-#         print(f"Unexpected error occurred: {e}")
 
 def merge_geojson_files(inThisFolder, config, contourFileName):
     """
@@ -150,18 +115,13 @@ def merge_geojson_files(inThisFolder, config, contourFileName):
         # Create the merged GeoJSON
         merged_geojson = {
             "type": "FeatureCollection",
+            "name": "OGRGeoJSON",
+            "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
             "features": merged_features
         }
 
-        # Add CRS information if present in either source file
-        if "crs" in data_airfields:
-            merged_geojson["crs"] = data_airfields["crs"]
-        elif "crs" in data_contour:
-            merged_geojson["crs"] = data_contour["crs"]
-
-        # Write the merged GeoJSON to a new file
         with open(merged_geojson_path, 'w') as f:
-            json.dump(merged_geojson, f, indent=2)
+            json.dump(merged_geojson, f, separators=(',', ':'))
 
         print(f"GeoJSON files merged successfully. Output file: {merged_geojson_path}")
 
