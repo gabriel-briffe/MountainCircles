@@ -9,13 +9,13 @@ using namespace std;
 class Cell {
     public:
         float elevation;
-        float altitude; // = nodataltitude;
+        float altitude; // = nodataltitude, set after reading the file and getting nodataltitude;
         size_t oi =0;    
         size_t oj =0;    
         size_t i;
         size_t j;
         bool ground = false;
-        // Constructor to initialize origin
+
         Cell(int elev = 0, size_t row = 0, size_t col = 0) : elevation(elev), i(row), j(col) {}
 
         void initialize(const Params& params){
@@ -106,10 +106,8 @@ class Cell {
 
         bool calculate(const vector<vector<Cell>>& mat,const size_t oi, const size_t oj,const Params& params) {
             float requiredAltitude = mat[oi][oj].altitudeRequiseDepuis(mat,this->i-oi,this->j-oj,params.cellsize_over_finesse);
-            // Cell* cellPtr= &M.mat[i][j];
             float altitude = this->altitude;
             if (this->oi!=0 &&  requiredAltitude >= altitude){
-                // cout <<"perso "<<"avoid worsening or equal update"<<endl;
                 return false;
             }
             if (requiredAltitude <= this->elevation) {

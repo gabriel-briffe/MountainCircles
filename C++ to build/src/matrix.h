@@ -119,8 +119,7 @@ public:
             Cell& cell = this->mat[i][j];
             Cell& parent = this->mat[parenti][parentj];
 
-            if(parent.oi==cell.oi && parent.oj==cell.oj){/* cout<<"perso parent origin identique --> abort"<<endl; */ continue; }
-            // if(parent.i==cell.oi && parent.j==cell.oj){cout<<"perso parent deja l'origine"<<endl; }
+            if(parent.oi==cell.oi && parent.oj==cell.oj){continue;}
             if(cell.ground){continue;}
 
 
@@ -133,13 +132,12 @@ public:
                 oj_elected=parent.j;
             }
 
-            if(oi_elected==cell.oi && oj_elected==cell.oj){/* cout<<"perso test2"<<endl; */ continue;}  //cas où le test de la cellule déja calculée s'est fait, avec plusieurs origines autours, mais qui ne change rien
+            if(oi_elected==cell.oi && oj_elected==cell.oj){continue;}  //cas où le test de la cellule déja calculée s'est fait, avec plusieurs origines autours, mais qui ne change rien
             bool updated;
             updated = cell.calculate(this->mat, oi_elected, oj_elected, params);
 
             // add nb cells with different origins to stack
             if (updated){
-                // cout << "perso been updated "  << endl;
                 auto new_neighbours = neighbours_with_different_origin_for_stack(i, j);
                 stack.insert(stack.end(), new_neighbours.begin(), new_neighbours.end());
             }
