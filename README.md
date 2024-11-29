@@ -60,15 +60,23 @@ python launch.py albertville.yaml
 - f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m
 - copy the two files (with the same names beyond the extension) on your smartphone, and share them with Guru Maps
 
+### mountain passes
+- there is a mountain_passes folder in the google drive link above, to add another overlay if desired.
+- their position is extracted from the calculations over several glide parameters, recombined, and intersected with the OSM database.
+- the scripts can be seen in the utils folder on github, although there is still a bit of work in qgis between and after the scripts at the moment (conversion into .shp, add "id" fields, create label field, clean empty elements..)
+
 
 # to do next
 
 - add peaks, and passes, to the geojson
 - add mapcss styles for that
+- get a list of all the outlandings
+- expand to the east to get the complete alps
 - see if polygon export is viable in the geojson to color the map for each airfield
 - add the ability to choose different glide/ground clearance/circuit height for each airfield
 - use this calcultation to extract all the passes that are key points to glide back to an airfield
 - long term: make a self contained executable
+- add airspace. we could start with airspace connected to the ground
 
 
 # Disclaimer:

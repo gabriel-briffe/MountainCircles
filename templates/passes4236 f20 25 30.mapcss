@@ -1,0 +1,15 @@
+node|z11- {
+    width: 10pt;
+    color: brown;
+    icon-image: "poi_saddle.svg";
+    icon-tint: brown;
+}
+
+node|z13- {
+    text: eval(tag("namele"));
+    text-color: DarkRed;
+    font-weight:normal;
+    font-size:11;
+    font-stroke-width:4pt;
+    font-stroke-color: white;
+}
