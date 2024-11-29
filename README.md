@@ -49,12 +49,16 @@ python launch.py albertville.yaml
 - a geojson conversion of the contour lines for all output, in the right CRS for Guru Maps
 - a .mapcss style file of the same name
 - names ending with _airfields also have airfields to display
-- copy the two files (with the same names beyond the extension) on your smartphone, and share them with Guru Maps
 - i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
 
 ### .mapcss styles
 - found in /templates
 - modify it and it will be dispatched to all the calculation results
+
+### results already computed
+- https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=sharing
+- f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m
+- copy the two files (with the same names beyond the extension) on your smartphone, and share them with Guru Maps
 
 
 # to do next

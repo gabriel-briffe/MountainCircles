@@ -15,17 +15,18 @@ CRS:
   definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
 
 glide_parameters:
-  glide_ratio: 20
-  ground_clearance: 50
-  circuit_height: 100
+  glide_ratio: 30
+  ground_clearance: 0
+  circuit_height: 250
 
 calculation_parameters:
-  max_altitude: 4000
+  max_altitude: 4200
 
 rendering:
   contour_height: 100
 
 gurumaps: true
+exportPasses: true
 reset_results: false
 
-merged_output_name: merged_output
+merged_output_name: merged
