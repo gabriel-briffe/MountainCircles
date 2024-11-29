@@ -50,7 +50,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 - add https://drive.google.com/file/d/1-VK5xH8YsDiYMH_TTw0kfHIHoiT12Jh2/view?usp=sharing in the topography folder
 
 - check the file pathes in the yaml configuration files (start with albertville.yaml for just one airfield)
-- ```reset_results: true``` start by deleting the results of the previous run you launched with this config
+- ```reset_results: true``` starts by deleting the results of the previous run you launched with this config
 
 
 ``` 
