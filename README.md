@@ -13,12 +13,33 @@ That map has the following parameters:
 
 The objective has now shifted to providing a way to quickly compute a file to display, with everyone its own glide parameters, and eveyone its own list of airfields.
 
+# Today
+for quicker export, we just have vector layers that we can switch on and off in Guru Maps:
+
+![guru map](images/gm.jpg)
+
+## How to download
+- from your phone:
+- install Guru Maps
+- go to https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
+- find the layers you want (f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m) [*west alps has both fields and outlanding fields*]
+- for any layer, download both **the geojson** (the data) **+ the mapcss** (the style)
+- share the files with Guru Maps previously installed  (go to your files explorer application -download folder- and select the files and share if needed)
+- in Guru Maps, the files should be found in the overlay section, which means you can choose the background layer that you want.
+- i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
+
+### Notes on the peaks and passes layers
+- the peaks are a decluttered version of the OSM database, designed to keep only the highest one 5km around
+- the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30)
 
 
 
 
 
-# Requirements to make this work so far:
+
+# If you want to contribute, or run the code yourself to choose you own airfields and glide parameters:
+
+### Requirements to make this work so far:
 
 - Compile compute.cpp (it works on mac with clang++, need feedback on other systems)  
 - put it in the main folder besides launch.py
@@ -53,28 +74,15 @@ python launch.py albertville.yaml
 
 ### .mapcss styles
 - found in /templates
-- modify it and it will be dispatched to all the calculation results
-
-### results already computed
-- https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=sharing
-- f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m
-- copy the two files (with the same names beyond the extension) on your smartphone, and share them with Guru Maps
-
-### mountain passes
-- there is a mountain_passes folder in the google drive link above, to add another overlay if desired.
-- their position is extracted from the calculations over several glide parameters, recombined, and intersected with the OSM database.
-- the scripts can be seen in the utils folder on github, although there is still a bit of work in qgis between and after the scripts at the moment (conversion into .shp, add "id" fields, create label field, clean empty elements..)
+- they are copied alongside each result after calculation for quicker export
+- Guru Maps docs: https://gurumaps.app/docs/mapcss
 
 
 # to do next
 
-- add peaks, and passes, to the geojson
-- add mapcss styles for that
-- get a list of all the outlandings
 - expand to the east to get the complete alps
 - see if polygon export is viable in the geojson to color the map for each airfield
 - add the ability to choose different glide/ground clearance/circuit height for each airfield
-- use this calcultation to extract all the passes that are key points to glide back to an airfield
 - long term: make a self contained executable
 - add airspace. we could start with airspace connected to the ground
 
@@ -82,3 +90,6 @@ python launch.py albertville.yaml
 # Disclaimer:
 
 this is unchecked amateur work, altitudes could be wrong, find a way to check that you are happy with the results if you fly with it.
+
+# Credits
+https://github.com/planeur-net/outlanding for the west alps cup file
