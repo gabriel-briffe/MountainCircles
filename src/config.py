@@ -19,9 +19,6 @@ class Config:
         self.compute = config['input_files']['compute']
         self.mapcssTemplate = config['input_files']['mapcssTemplate']
         
-        self.conda_path = config['conda_path']
-        self.conda_gdal_env = config['conda_gdal_env']
-
         self.CRS = config['CRS']['definition']
         self.CRS_name = config['CRS']['name']
 

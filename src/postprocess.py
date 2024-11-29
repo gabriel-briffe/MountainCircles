@@ -7,20 +7,11 @@ import json
 def generate_contours(inThisFolder, config, ASCfilePath, contourFileName):
     """Generate contour lines from the input raster file using gdal_contour from the specified Conda environment."""
     try:
-        # Define the path to the Conda executable
-        conda_path = config.conda_path
-        gdal_env = config.conda_gdal_env
-
-        # Check if the Conda path exists
-        if not os.path.isfile(conda_path):
-            raise FileNotFoundError(f"Conda executable not found: {conda_path}")
-
         # Paths for input ASC file and output GPKG
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
 
         # Construct the command to run gdal_contour in the specified conda environment
         command = [
-            conda_path, "run", "-n", gdal_env,
             "gdal_contour", 
             '-b', '1', 
             '-a', 'ELEV', 
@@ -56,11 +47,8 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
         geojson_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
 
-        conda_path = config.conda_path  # Assuming this is where your conda is installed
-        gdal_env = config.conda_gdal_env
-
         command = [
-            conda_path, "run", "-n", gdal_env, "ogr2ogr",
+            "ogr2ogr",
             "-f", "GeoJSON",
             "-s_srs", f"{config.CRS}",
             "-t_srs", "EPSG:4326",
