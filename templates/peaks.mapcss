@@ -1,11 +1,11 @@
-node|z10- {
+node|z11- {
     width: 10pt;
     color: brown;
     icon-image: "poi_triangle.svg";
     icon-tint: brown;
 }
 
-node|z13- {
+node|z12- {
     text: eval(tag("namele"));
     text-color: DarkRed;
     font-weight:normal;
