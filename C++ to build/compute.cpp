@@ -27,9 +27,14 @@ int main(int argc, char* argv[]) {
         M.write_output(params, params.output_path + "/output_sub.asc", false);  //ground altitude set to 0 - useful for recombining all tiles
         M.write_output(params, params.output_path + "/local.asc", true);    //ground altitude set to nodata - ground transparent
 
-        M.detect_passes(params);
-        M.weight_passes(params);
-        M.write_mountain_passes(params,params.output_path + "/mountain_passes.csv");
+
+        bool shouldExportPasses = (params.exportPasses == "true" || params.exportPasses == "1" || atoi(params.exportPasses.c_str()) != 0);
+        
+        if (shouldExportPasses){
+            M.detect_passes(params);
+            M.weight_passes(params);
+            M.write_mountain_passes(params,params.output_path + "/mountain_passes.csv");
+        }
 
 
         // cout << "calcul "<<params.output_path<<" fini"<<endl;

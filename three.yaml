@@ -26,6 +26,7 @@ rendering:
   contour_height: 100
 
 gurumaps: false
+exportPasses: true
 reset_results: true
 
 merged_output_name: merged_output

@@ -34,6 +34,7 @@ class Config:
         self.contour_height = config['rendering']['contour_height']
 
         self.gurumaps = config["gurumaps"]
+        self.exportPasses = config["exportPasses"]
         self.reset_results = self.clean(config["reset_results"])
 
         self.merged_output_name = config["merged_output_name"]

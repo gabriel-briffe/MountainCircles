@@ -11,32 +11,6 @@ import time
 
 
 
-# def make_individuals(airfield, config):
-
-#     # Create folder for this airfield
-#     airfield_folder = os.path.join(config.calculation_folder, airfield.name)
-#     os.makedirs(airfield_folder, exist_ok=True)
-
-#     # Check if the output file already exists, if so, skip processing
-#     ASCfile = os.path.join(airfield_folder, 'local.asc')
-#     if os.path.exists(ASCfile):
-#         print(f"Output file already exists for {airfield.name}, skipping this airfield.")
-#         return  # Exit the function if the file exists
-    
-#     # Call the C++ function
-#     try:
-#         subprocess.run([config.compute, 
-#                         str(airfield.x), str(airfield.y), 
-#                         str(config.glide_ratio), str(config.ground_clearance), str(config.circuit_height), 
-#                         str(config.max_altitude), airfield_folder,config.topography_file_path], 
-#                        check=True)
-#     except subprocess.CalledProcessError as e:
-#         print(f"An error occurred while creating contour for {airfield.name}: {e}")
-#         return  # Exit if there was an error with compute
-
-#     # postprocess
-#     postProcess(airfield_folder, config, ASCfile, airfield.name)
-
 def make_individuals(airfield, config):
     try:
         # Create folder for this airfield
@@ -58,7 +32,7 @@ def make_individuals(airfield, config):
             config.compute,
             str(airfield.x), str(airfield.y),
             str(config.glide_ratio), str(config.ground_clearance), str(config.circuit_height),
-            str(config.max_altitude), str(airfield_folder), config.topography_file_path
+            str(config.max_altitude), str(airfield_folder), config.topography_file_path, str(config.exportPasses).lower()
         ]
 
         result = subprocess.run(command, check=True, text=True, capture_output=True)
