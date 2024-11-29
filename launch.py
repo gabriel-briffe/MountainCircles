@@ -12,6 +12,11 @@ import time
 
 
 def make_individuals(airfield, config):
+    if not config.isInside(airfield.x,airfield.y):
+        print(f'{airfield.name} is outside the map, discarding...')
+        return
+    else:
+        print (f"launching {airfield.name}")
     try:
         # Create folder for this airfield
         airfield_folder = Path(config.calculation_folder) / airfield.name

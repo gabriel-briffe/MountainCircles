@@ -40,6 +40,39 @@ class Config:
         self.merged_output_name = config["merged_output_name"]
         
         self.calculation_folder = self.create_calculation_folder()
+        self.calculate_boundaries()
+
+    def calculate_boundaries(self):
+        header = {}
+        line_count = 0
+
+        with open(self.topography_file_path, 'r') as file:
+            for line in file:
+                if line_count >= 5:
+                    break  # Stop reading after the 5th line
+                key, value = line.strip().split()
+                header[key.strip()] = float(value.strip())
+                line_count += 1
+
+            # Extract necessary data
+            ncols = header['ncols']
+            nrows = header['nrows']
+            xllcorner = header['xllcorner']
+            yllcorner = header['yllcorner']
+            cellsize = header['cellsize']
+
+            # Calculate corners in the projected coordinate system
+            xurcorner = xllcorner + (ncols - 1) * cellsize
+            yurcorner = yllcorner + (nrows - 1) * cellsize
+
+            self.minx = xllcorner
+            self.maxy = yurcorner
+            self.maxx = xurcorner
+            self.miny = yllcorner
+
+        
+    def isInside(self,x,y):
+        return (self.minx<= x <= self.maxx) and (self.miny<= y <= self.maxy)
 
     def create_calculation_folder(self):
         dir_path = os.path.join(self.result_folder_path,f'{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}-{self.max_altitude}')

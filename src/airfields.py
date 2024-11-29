@@ -1,9 +1,25 @@
 import os
 import csv
 import json
-from typing import Dict, Any
+# from typing import Dict, Any
 from typing import List
 from pyproj import Transformer
+
+
+class Airfield:
+    def __init__(self, parts):
+        self.name = parts[0]
+        self.x = parts[1]
+        self.y = parts[2]
+
+
+
+class Airfields4326:
+    def __init__(self, config):
+        self.filePath = config.airfield_file_path  
+        self.destinationCRS = config.CRS  
+        self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
+        csv_to_geojson(config)
 
 
 
@@ -62,18 +78,4 @@ def csv_to_geojson(config):
     print(f"GeoJSON file created at: {geojson_file_path}")
 
 
-class Airfield:
-    def __init__(self, parts):
-        self.name = parts[0]
-        self.x = parts[1]
-        self.y = parts[2]
-
-
-
-class Airfields4326:
-    def __init__(self, config):
-        self.filePath = config.airfield_file_path  
-        self.destinationCRS = config.CRS  
-        self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
-        csv_to_geojson(config)
 
