@@ -43,20 +43,18 @@ for quicker export, we just have vector layers that we can switch on and off in 
 
 - Compile compute.cpp (it works on mac with clang++, need feedback on other systems)  
 - put it in the main folder besides launch.py
-
-- install conda
-- make an environnement where you install GDAL
-- make and environnement with the latest python (3.12.7 here) from which to launch the code
-
-- install the dependencies (conda install pyyaml numpy pyproj ...) 
-
+- ``` conda install conda-forge::pyyaml```
+- ``` conda install conda-forge::pyproj```
+- ``` conda install conda-forge::numpy```
+- ``` conda install conda-forge::gdal```
 - add https://drive.google.com/file/d/1-VK5xH8YsDiYMH_TTw0kfHIHoiT12Jh2/view?usp=sharing in the topography folder
 
-- check the file pathes in the yaml configuration files (start with albertville.yaml, gurumaps set to false)
+- check the file pathes in the yaml configuration files (start with albertville.yaml for just one airfield)
+- ```reset_results: true``` start by deleting the results of the previous run you launched with this config
 
 
 ``` 
-python launch.py albertville.yaml
+python launch.py [config].yaml
  ```
 
 # Usage
@@ -67,24 +65,24 @@ python launch.py albertville.yaml
 - all in the Coordinate Reference System specified in the yaml config file
 
 ### With ```gurumaps: true``` in the yaml config file, it will provide as well:
-- a geojson conversion of the contour lines for all output, in the right CRS for Guru Maps
+- a geojson conversion of the contour lines for all output, in the right CRS for Guru Maps (EPSG:4326)
 - a .mapcss style file of the same name
 - names ending with _airfields also have airfields to display
-- i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
 
 ### .mapcss styles
 - found in /templates
-- they are copied alongside each result after calculation for quicker export
+- they are copied alongside each geojson, named identically, after calculations, for quicker export
 - Guru Maps docs: https://gurumaps.app/docs/mapcss
+- when playing with the styles, i found out that using android studio's emulator was quicker than exporting to real phone. Some mapcss crashed the app consistently -> clear all app data, or uninstall/reinstall
 
 
 # to do next
 
-- expand to the east to get the complete alps
+- get the missing eastern bit of the alp
 - see if polygon export is viable in the geojson to color the map for each airfield
-- add the ability to choose different glide/ground clearance/circuit height for each airfield
+- add the ability to choose individual glide/ground clearance/circuit height for each airfield
 - long term: make a self contained executable
-- add airspace. we could start with airspace connected to the ground
+- add airspace. we could start with airspace connected to the ground (P areas, national/regional parks)
 
 
 # Disclaimer:
