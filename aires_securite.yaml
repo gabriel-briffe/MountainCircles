@@ -5,6 +5,7 @@ input_files:
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/aires_securite
   compute: ./compute
+  # compute: ./compute.exe for windows
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:

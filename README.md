@@ -41,21 +41,34 @@ for quicker export, we just have vector layers that we can switch on and off in 
 
 ### Requirements to make this work so far:
 
-- Compile compute.cpp (it works on mac with clang++, need feedback on other systems)  
-- put it in the main folder besides launch.py
+- Compile compute.cpp (in VSCode on mac select Clang++ at build, for windows, see below)  
+- put the resulting "compute" file (or compute.exe for windows) in the main folder besides launch.py
+- create a conda environnement with the latest python, activate it, and run:
 - ``` conda install conda-forge::pyyaml```
 - ``` conda install conda-forge::pyproj```
 - ``` conda install conda-forge::numpy```
 - ``` conda install conda-forge::gdal```
 - add https://drive.google.com/file/d/1-VK5xH8YsDiYMH_TTw0kfHIHoiT12Jh2/view?usp=sharing in the topography folder
 
-- check the file pathes in the yaml configuration files (start with albertville.yaml for just one airfield)
+- check the file pathes in the yaml configuration files 
 - ```reset_results: true``` starts by deleting the results of the previous run you launched with this config
+- start with albertville.yaml for just one airfield, then three.yaml is... 3 airfields.. yeah you got it
 
 
 ``` 
 python launch.py [config].yaml
  ```
+
+### for windows with VSCode
+- As a mac user, through a windows 11 virtual machine, vscode couldn't build the C++ as is. 
+- I followed the recommendations to install visual studio build tools. windows had to restart to complete installation. 
+- **-->Then do not launch VSCode from the desktop shortcut<--** 
+- Do Windows -> search for "Developer Command Prompt for VS", type in ```cl``` to make sure it is installed and responding, you should see a version number, and not an error. 
+- Then navigate in command line to the folder where you have cloned the repository, do ```code .```, and now VSCode has access to the C++ build tools and will offer them to you.
+- open compute.cpp -> command palette -> run build task
+- it should take half a second, check for errors.
+- if no errors, move compute.exe or change the path in the yaml config file.
+
 
 # Usage
 
