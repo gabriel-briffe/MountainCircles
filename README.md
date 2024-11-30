@@ -30,7 +30,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 
 ### Notes on the peaks and passes layers
 - the peaks are a decluttered version of the OSM database, designed to keep only the highest one 5km around
-- the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30)
+- the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30"
 
 
 
@@ -42,7 +42,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 ### Requirements to make this work so far:
 
 - In the main folder, there are already built C++ files: "compute" (for mac), and "compute.exe" (for windows)
-- comment/uncomment the proper lines:
+- comment/uncomment the proper lines in [config].yaml:
 ``` 
   #for mac:
   compute: ./compute
