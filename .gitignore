@@ -2,7 +2,6 @@
 **/.DS_Store
 /.vscode
 /cleanup
-/compute
 /results
 /data/topography/alosalpscustomLCC100m.asc
 /data/passes
