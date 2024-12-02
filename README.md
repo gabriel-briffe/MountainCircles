@@ -70,8 +70,8 @@ python launch.py [config].yaml
 ### Compiling C++ on mac with VSCode
 - check or install xcode
 - open vscode -> open folder ->C++ to build
-- open compute.cpp, agree to install C++ extension.., open command palette -> run build task -> select clang++ -> it should build, read the output, you should have "build successful"
-- move compute to the main folder or change the path in the yaml config files.
+- open compute.cpp, agree to install C++ extension..
+- ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
 
 ### Compiling C++ in windows with VSCode
 - As a mac user, through a windows 11 virtual machine, vscode couldn't build the C++ as is. 
@@ -79,8 +79,8 @@ python launch.py [config].yaml
 - **-->Then do not launch VSCode from the desktop shortcut<--** 
 - Do Windows -> search for "Developer Command Prompt for VS", type in ```cl``` to make sure it is installed and responding, you should see a version number, and not an error. 
 - Then navigate in command line to the folder where you have cloned the repository, do ```code .```, and now VSCode has access to the C++ build tools and will offer them to you.
-- open compute.cpp, agree to install C++ extension.., open command palette -> run build task -> select the only option you are offered -> it should build, read the output, you should have "build successful"
-- move compute.exe to the main folder or change the path in the yaml config files.
+- open compute.cpp, agree to install C++ extension..
+- ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
 
 
 # Usage

@@ -5,7 +5,6 @@ input_files:
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/albertville
   compute: ./compute.exe
-  # compute: ./compute.exe for windows
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:
@@ -18,7 +17,7 @@ glide_parameters:
   circuit_height: 250
 
 calculation_parameters:
-  max_altitude: 4000
+  max_altitude: 1000
 
 rendering:
   contour_height: 100

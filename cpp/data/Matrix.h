@@ -9,7 +9,7 @@
 #include <sstream>
 #include <limits>
 #include <stdexcept>
-#include "cell.h"
+#include "Cell.h"
 #include "../io/Params.h"
 using namespace std;
 

@@ -6,8 +6,8 @@
 #include <iomanip>
 #include <algorithm>
 #include "data/Cell.h"
-#include "data/matrix.h"
-#include "io/params.h"
+#include "data/Matrix.h"
+#include "io/Params.h"
 using namespace std;
 
 
