@@ -5,9 +5,9 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
-#include "src/cell.h"
-#include "src/matrix.h"
-#include "src/params.h"
+#include "data/Cell.h"
+#include "data/matrix.h"
+#include "io/params.h"
 using namespace std;
 
 
