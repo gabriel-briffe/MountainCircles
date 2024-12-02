@@ -5,6 +5,7 @@
 /results
 /data/topography/alosalpscustomLCC100m.asc
 /data/passes
+/compute.exe
 **/*exe
 **/*.pyc
 compute

@@ -1,16 +1,11 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#include <cstddef>
-#include <vector>
-#include <tuple>
-#include <queue>
-#include <fstream>
-#include <sstream>
-#include <limits>
-#include <stdexcept>
-#include "Cell.h"
 #include "../io/Params.h"
+#include "Cell.h"
+#include <cstddef>
+#include <tuple>
+#include <vector>
 using namespace std;
 
 class Matrix {

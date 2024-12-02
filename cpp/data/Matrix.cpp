@@ -1,5 +1,19 @@
 #include "Matrix.h"
 
+#include "../io/Params.h"
+#include "Cell.h"
+#include <cstddef>
+#include <fstream>
+#include <iostream>
+#include <limits>
+#include <queue>
+#include <sstream>
+#include <stdexcept>
+#include <tuple>
+#include <vector>
+using namespace std;
+
+
 // Constructor
 Matrix::Matrix(Params& params) {
     readFile(params);

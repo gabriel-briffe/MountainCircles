@@ -1,4 +1,9 @@
+#include "../io/Params.h"
 #include "Cell.h"
+#include <cmath>
+#include <cstddef>
+#include <vector>
+using namespace std;
 
 
 Cell::Cell(int elev, size_t row, size_t col) : elevation(elev), i(row), j(col) {}

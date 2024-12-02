@@ -1,5 +1,13 @@
 #include "Params.h"
 
+#include <algorithm>
+#include <cstddef>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+using namespace std;
+
+
 Params::Params(int argc, char* argv[]) {
     if (argc < 10) {
         throw runtime_error("Not enough arguments provided. Expected format: ./compute homex homey finesse distSol securite nodataltitude output_path topology");

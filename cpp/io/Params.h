@@ -3,9 +3,6 @@
 
 #include <cstddef>
 #include <string>
-#include <stdexcept>
-#include <iostream>
-#include <algorithm>
 using namespace std;
 
 class Params {

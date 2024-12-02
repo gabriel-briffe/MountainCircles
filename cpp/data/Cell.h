@@ -1,11 +1,11 @@
 #ifndef CELL_H
 #define CELL_H
 
+#include "../io/Params.h"
 #include <cstddef>
 #include <vector>
-#include <cmath>
-#include "../io/Params.h"
 using namespace std;
+
 
 class Cell {
     public:

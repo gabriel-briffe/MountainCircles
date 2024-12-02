@@ -1,13 +1,8 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <iomanip>
-#include <algorithm>
 #include "data/Cell.h"
 #include "data/Matrix.h"
 #include "io/Params.h"
+#include <iostream>
+#include <string>
 using namespace std;
 
 
@@ -41,8 +36,8 @@ int main(int argc, char* argv[]) {
         // cout << "calcul "<<params.output_path<<" fini"<<endl;
 
         return 0;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
         return 1;
     }
 }
