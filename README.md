@@ -41,15 +41,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 
 ### Requirements to make this work so far:
 
-- In the main folder, there are already built C++ files: "compute" (for mac), and "compute.exe" (for windows)
-- comment/uncomment the proper lines in [config].yaml:
-``` 
-  #for mac:
-  compute: ./compute
-  # for windows:
-  # compute: ./compute.exe 
- ```
-- continue following the instructions, if you get an error when trying to run, or want to modify the C++, you might have to build again yourself (see further down)
+- build C++ files (see below)
 - create a conda environnement with the latest python, activate it, and run:
 - ``` conda install conda-forge::pyyaml```
 - ``` conda install conda-forge::pyproj```
@@ -71,16 +63,16 @@ python launch.py [config].yaml
 - check or install xcode
 - open vscode -> open folder ->C++ to build
 - open compute.cpp, agree to install C++ extension..
-- ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
+- from the main folder, run ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
 
-### Compiling C++ in windows with VSCode
+### Compiling C++ in windows with VSCode (feedback needed)
 - As a mac user, through a windows 11 virtual machine, vscode couldn't build the C++ as is. 
 - I followed the recommendations to install visual studio build tools. windows had to restart to complete installation. 
 - **-->Then do not launch VSCode from the desktop shortcut<--** 
 - Do Windows -> search for "Developer Command Prompt for VS", type in ```cl``` to make sure it is installed and responding, you should see a version number, and not an error. 
 - Then navigate in command line to the folder where you have cloned the repository, do ```code .```, and now VSCode has access to the C++ build tools and will offer them to you.
 - open compute.cpp, agree to install C++ extension..
-- ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
+- from the main folder, run ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
 
 
 # Usage

@@ -4,8 +4,7 @@ input_files:
   airfield_file: ./data/airfields/three.csv
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/three
-  compute: ./compute  
-  # compute: ./compute.exe for windows
+  compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:

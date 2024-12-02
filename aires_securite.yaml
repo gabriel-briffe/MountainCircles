@@ -4,8 +4,7 @@ input_files:
   airfield_file: ./data/airfields/guide_aires_securite.csv
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/aires_securite
-  compute: ./compute
-  # compute: ./compute.exe for windows
+  compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:

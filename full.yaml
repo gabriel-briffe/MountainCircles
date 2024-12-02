@@ -4,10 +4,7 @@ input_files:
   airfield_file: ./data/airfields/full4326.csv
   topography_file: ./data/topography/alosalpscustomLCC100m.asc
   result_folder: ./results/everything
-  #for mac:
-  compute: ./compute
-  # for windows:
-  # compute: ./compute.exe 
+  compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:
