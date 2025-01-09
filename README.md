@@ -19,7 +19,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 ![guru map](images/gm.jpg)
 
 ## How to download
-- from your phone:
+## from your phone:
 - install Guru Maps
 - go to https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
 - find the layers you want (f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m) [*west alps has both fields and outlanding fields*]
@@ -28,12 +28,27 @@ for quicker export, we just have vector layers that we can switch on and off in 
 - in Guru Maps, the files should be found in the overlay section, which means you can choose the background layer that you want.
 - i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
 
+## from your mac
+- in the app store, on apple silicon, the app is available, the font a little small though.
+- could be available on windows too, to be checked
+
 ### Notes on the peaks and passes layers
 - the peaks are a decluttered version of the OSM database, designed to keep only the highest one 5km around
 - the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30"
 
-
-
+## How to use
+### !! The pictures are with glide parameters L/D 25, ground clearance 0, circuit height 250m !!
+- the calculated path back to the landing is always going towards the center of the arcs of circles
+- here at 2600m the way back to Albertville is not the same depending on which side of the valley we are
+- **the way north goes through a pass, it is actually a flat pass, it would be good to use at least 100m ground clearance instead of 0**
+![back_to_albertville.png](images/back_to_albertville.png)
+- we might be interested in finding the point at which we switch from one airfield to the next one, and know the minimum altitude at that point
+- here, **with no ground clearance over a flat pass to the south** it would be at Saint-laurent du pont at 1600m
+![between_challes_and_versoud.png](images/between_challes_and_versoud.png)
+- or we might want to know which are the escapes from the rhone valley to the rhine valley
+- here we see that the jump from rhone to rhine necessitates at least 2600m (actually 2700m if we add 100m of ground clearance over the passes), and the high rhine valley neccesitates at least 2900m to be on reach of bad ragaz
+![from_munster_to_bad_ragaz.png](images/from_munster_to_bad_ragaz.png)
+- I should really publish calculations with ground clearance of 100m
 
 
 
