@@ -1,6 +1,13 @@
 # MountainCircles
+MountainCircles is an algorithm that generates contour lines of the glide cones around landable places in the mountains.
+Inputs are:
+- a list of landable places
+- glide ratio
+- circuit height
+- ground clearance (useful when a pass is a keypoint to glide to the landing, to have some margin to make sure we make it)
 
-This project is the continuation of a project that ended up in early 2024 with this interactive map covering the full Alps (different information at different zoom levels):
+### Origin
+- This project is the continuation of a project that ended up in early 2024 with this interactive map covering the full Alps (different information at different zoom levels):
 https://live.glidernet.org/#c=45.26242,7.67261&z=7&m=4&s=1
 
 ![mountain circles map](images/ogn.jpg)
