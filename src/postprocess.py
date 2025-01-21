@@ -45,7 +45,7 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
     """Generate contour lines from the input raster file using gdal_contour from the specified Conda environment."""
     try:
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-        geojson_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
+        geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
 
         command = [
             "ogr2ogr",
@@ -83,8 +83,8 @@ def merge_geojson_files(inThisFolder, config, contourFileName):
     """
     try:
         geojson_airfields_path = os.path.join(config.result_folder_path, "airfields", f"{config.name}.geojson")
-        geojson_contour_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
-        merged_geojson_path = os.path.join(inThisFolder, f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_airfields.geojson')
+        geojson_contour_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
+        merged_geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_airfields.geojson')
 
         # Read GeoJSON files
         with open(geojson_airfields_path, 'r') as f:
@@ -124,7 +124,7 @@ def merge_geojson_files(inThisFolder, config, contourFileName):
 def copyMapCss(inThisFolder, config, contourFileName,extension):
     try:
         #copy mapcss for gurumaps export
-        mapcss_file = os.path.join(inThisFolder,f'{contourFileName}-{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss')
+        mapcss_file = os.path.join(inThisFolder,f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss')
         shutil.copy2(config.mapcssTemplate, mapcss_file)
         print(f"mapcss copied successfully to {mapcss_file}")
 

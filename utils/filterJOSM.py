@@ -59,9 +59,9 @@ def find_closest_pass(mountain_passes_path, custom_points_path, output_path):
 
 
 # Path to your shapefiles
-mountain_passes_path = "data/passes/passes_osm_4326.shp"
-custom_points_path = "data/passes/passes_from_everything_20_25_30_4326.shp"
-output_path = "results/passes/passes4326.shp"
+mountain_passes_path = "data/passes/passesosmpyr.shp"
+custom_points_path = "data/passes/passesfromcalc4326pyr.shp"
+output_path = "results/passes/passes4326pyr.shp"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 find_closest_pass(mountain_passes_path, custom_points_path, output_path)

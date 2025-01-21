@@ -36,5 +36,5 @@ def collect_and_merge_csv_files(root_folder):
     print(f"Total unique mountain passes: {len(all_passes)}")
 
 # Assuming the root directory is where this script is run from
-root_folder = 'results/everything'
+root_folder = 'results/pyrenees'
 collect_and_merge_csv_files(root_folder)

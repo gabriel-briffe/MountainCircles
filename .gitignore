@@ -3,7 +3,8 @@
 /.vscode
 /cleanup
 /results
-/data/topography/alosalpscustomLCC100m.asc
+/data/topography/*.asc
+/data/topography/*.asc*
 /data/passes
 /data/map_background
 /compute.exe
