@@ -28,9 +28,9 @@ for quicker export, we just have vector layers that we can switch on and off in 
 ## How to download
 ## from your phone:
 - install Guru Maps
-- install a nice free offline map background
-- Option 1: adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
-- Option 2: https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing download, share with guru maps as above
+- install a nice free map background
+- Option 1 (online only): adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
+- Option 2 (offline): https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing download, share with guru maps as above
 
 - go to https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
 - find the folder corresponding to the parameters you want ("L/D 20-ground 100m-circuit 250m" for example - ground 100m means ground clearance 100m, so when the way back is over a pass, the calculation puts you on glide, here 20, for a point 100m above the pass.) 
