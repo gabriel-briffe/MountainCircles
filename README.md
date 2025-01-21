@@ -28,12 +28,18 @@ for quicker export, we just have vector layers that we can switch on and off in 
 ## How to download
 ## from your phone:
 - install Guru Maps
+- install a nice free offline map background
+- Option 1: adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
+- Option 2: https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing download, share with guru maps as above
+
 - go to https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
-- find the layers you want (f20 - gas0 - s250 means glide ratio 20, ground clearance 0m, circuit height 250m) [*west alps has both fields and outlanding fields*]
-- for any layer, download both **the geojson** (the data) **+ the mapcss** (the style)
+- find the folder corresponding to the parameters you want ("L/D 20-ground 100m-circuit 250m" for example - ground 100m means ground clearance 100m, so when the way back is over a pass, the calculation puts you on glide, here 20, for a point 100m above the pass.) 
+- download everything (both **the geojson** (the data) **+ the mapcss** (the style)) in that folder.
 - share the files with Guru Maps previously installed  (go to your files explorer application -download folder- and select the files and share if needed)
 - in Guru Maps, the files should be found in the overlay section, which means you can choose the background layer that you want.
-- i also suggest adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
+- the layer startng by "aa_" is the recombined file of all the individual airfields.
+- You can superimpose the recombined version with an individual layer, or more, in guru maps
+
 
 ## from your mac
 - in the app store, on apple silicon, the app is available, the font a little small though.

@@ -134,4 +134,4 @@ def merge_output_rasters(config, output_filename):
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
     print(f"Merged raster written to {output_path}")
 
-    postProcess(config.calculation_folder, config, output_path, config.merged_output_name)
+    postProcess(config.calculation_folder, config.calculation_folder, config, output_path, config.merged_output_name)

@@ -45,7 +45,7 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
     """Generate contour lines from the input raster file using gdal_contour from the specified Conda environment."""
     try:
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-        geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
+        geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
 
         command = [
             "ogr2ogr",
@@ -75,7 +75,7 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
         print(f"An unexpected error occurred: {e}")
 
 
-def merge_geojson_files(inThisFolder, config, contourFileName):
+def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName):
     """
     Merge the GeoJSON files for contours and airfields using JSON parsing.
     
@@ -83,8 +83,8 @@ def merge_geojson_files(inThisFolder, config, contourFileName):
     """
     try:
         geojson_airfields_path = os.path.join(config.result_folder_path, "airfields", f"{config.name}.geojson")
-        geojson_contour_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
-        merged_geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_airfields.geojson')
+        geojson_contour_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
+        merged_geojson_path = os.path.join(toThatFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson')
 
         # Read GeoJSON files
         with open(geojson_airfields_path, 'r') as f:
@@ -121,10 +121,10 @@ def merge_geojson_files(inThisFolder, config, contourFileName):
         print(f"An unexpected error occurred: {e}")
 
 
-def copyMapCss(inThisFolder, config, contourFileName,extension):
+def copyMapCss(toThatFolder, config, contourFileName,extension):
     try:
         #copy mapcss for gurumaps export
-        mapcss_file = os.path.join(inThisFolder,f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss')
+        mapcss_file = os.path.join(toThatFolder,f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss')
         shutil.copy2(config.mapcssTemplate, mapcss_file)
         print(f"mapcss copied successfully to {mapcss_file}")
 
@@ -136,10 +136,12 @@ def copyMapCss(inThisFolder, config, contourFileName,extension):
 
 
 
-def postProcess(inThisFolder, config, ASCfilePath, contourFileName):
+
+
+def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName):
     generate_contours(inThisFolder, config, ASCfilePath, contourFileName)
     if (config.gurumaps):
         create4326geosonContours(inThisFolder, config, contourFileName)
-        copyMapCss(inThisFolder, config, contourFileName,"")
-        merge_geojson_files(inThisFolder, config, contourFileName)
-        copyMapCss(inThisFolder, config, contourFileName,"_airfields")
+        # copyMapCss(inThisFolder, config, contourFileName,"_noAirfields")
+        merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName)
+        copyMapCss(toThatFolder, config, contourFileName,"")

@@ -1,6 +1,7 @@
 import os
 import sys
 import multiprocessing
+import shutil
 import subprocess
 from src.config import Config
 from src.airfields import Airfields4326
@@ -69,9 +70,21 @@ def make_individuals(airfield, config):
 
     # Post-process if all went well
     try:
-        postProcess(str(airfield_folder), config, str(ASCfile), airfield.name)
+        postProcess(str(airfield_folder), Path(config.calculation_folder), config, str(ASCfile), airfield.name)
     except Exception as e:
         print(f"Error during post-processing for {airfield.name}: {e}")
+
+
+def clean(config):
+    # Remove all output folders
+    for folder in os.listdir(config.calculation_folder):
+        folder = os.path.join(config.calculation_folder, folder)
+        if os.path.isdir(folder):
+            shutil.rmtree(folder)
+    # Remove all .asc, .gpkg, *_noAirfields.geojson files
+    for file in os.listdir(config.calculation_folder):
+        if file.endswith('.asc') or file.endswith('.gpkg') or file.endswith('_noAirfields.geojson'):
+            os.remove(os.path.join(config.calculation_folder, file))
 
 
 
@@ -91,6 +104,7 @@ def main(config_file):
 
     # # Merge all output_sub.asc files
     merge_output_rasters(config, f'{config.merged_output_name}.asc')
+    clean(config)
 
 
 

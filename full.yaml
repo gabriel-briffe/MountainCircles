@@ -1,23 +1,20 @@
 name: everything 
 
 input_files:
-  airfield_file: ./data/airfields/pyr2.csv
-  topography_file: ./data/topography/pyrenees100mLCC.asc
-  result_folder: ./results/pyrenees
+  airfield_file: ./data/airfields/full4326.csv
+  topography_file: ./data/topography/alosalpscustomLCC100m.asc
+  result_folder: ./results/everything
   compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:
   name: 100001
-  # alps:
-  # definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
-  # pyrenees:
-  definition: +proj=lcc +lat_0=42.5 +lon_0=0.3 +lat_1=42 +lat_2=43 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
+  definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
 
 glide_parameters:
   glide_ratio: 30
   ground_clearance: 100
-  circuit_height: 100
+  circuit_height: 250
 
 calculation_parameters:
   max_altitude: 4200
@@ -26,7 +23,7 @@ rendering:
   contour_height: 100
 
 gurumaps: true
-exportPasses: true
+exportPasses: false
 reset_results: false
 
-merged_output_name: merged
+merged_output_name: aa_alps
