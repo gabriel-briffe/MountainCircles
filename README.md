@@ -7,7 +7,7 @@ Inputs are:
 - ground clearance (useful when a pass is a keypoint to glide to the landing, to have some margin to make sure we make it)
 
 ### Origin
-- This project is the continuation of a project that ended up in early 2024 with this interactive map covering the full Alps (different information at different zoom levels):
+This project is the continuation of a project that ended up in early 2024 with this interactive map covering the full Alps (different information at different zoom levels):
 https://live.glidernet.org/#c=45.26242,7.67261&z=7&m=4&s=1
 
 you can still download the "alpes 600dpi 2.mbtiles" at https://drive.google.com/drive/folders/1fr68iDfBMsFurlEx9bBe8ZorvOEG9Lc7?usp=sharing and share this file on your phone with Guru Maps, a free android and iphone app that allows custom map import in MBTiles format. 
