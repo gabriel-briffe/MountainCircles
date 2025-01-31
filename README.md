@@ -58,7 +58,7 @@ The pictures are with glide parameters L/D 25, ground clearance 100m (100m margi
 - here, **with 100m ground clearance over a flat pass to the south** it would be at Saint-laurent du pont at 1700m
 ![chartreuse.png](images/chartreuse.png)
 - or we might want to know which are the escapes from the rhone valley to the rhine valley
-- here we see that the jump from rhone to rhine necessitates at least 2700m, and the high rhine valley neccesitates at least 3000m to be on reach of bad ragaz
+- here we see that the jump from rhone to rhine necessitates at least 2700m, and the high rhine valley necessitates at least 3000m to be on reach of bad ragaz
 ![furka.png](images/furka.png)
 
 
