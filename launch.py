@@ -83,7 +83,7 @@ def clean(config):
             shutil.rmtree(folder)
     # Remove all .asc, .gpkg, *_noAirfields.geojson files
     for file in os.listdir(config.calculation_folder):
-        if file.endswith('.asc') or file.endswith('.gpkg') or file.endswith('_noAirfields.geojson'):
+        if (file.endswith('.asc') and not file.endswith('_sectors.asc')) or file.endswith('.gpkg') or file.endswith('_noAirfields.geojson'):
             os.remove(os.path.join(config.calculation_folder, file))
 
 
@@ -103,7 +103,7 @@ def main(config_file):
         pool.starmap(make_individuals, [(airfield, config) for airfield in converted_airfields])
 
     # # Merge all output_sub.asc files
-    merge_output_rasters(config, f'{config.merged_output_name}.asc')
+    merge_output_rasters(config, f'{config.merged_output_name}.asc', f'{config.merged_output_name}_sectors.asc')
     clean(config)
 
 

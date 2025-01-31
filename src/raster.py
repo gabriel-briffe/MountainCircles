@@ -68,7 +68,7 @@ def align_rasters(rasters, cellsize):
     return aligned, min_x, min_y, nrows, ncols
 
 
-def merge_output_rasters(config, output_filename):
+def merge_output_rasters(config, output_filename, sectors_filename):
 
     nodata_value = float(config.max_altitude)
     # nodata_value = config.max_altitude
@@ -104,8 +104,9 @@ def merge_output_rasters(config, output_filename):
     
     # Initialize the aligned array with nodata_value
     aligned = np.full((nrows_total, ncols_total), nodata_value)
-
+    sectors = np.full((nrows_total, ncols_total), nodata_value)
     # Process each raster file one by one
+    sector=0
     for path, ncols_sub, nrows_sub, xllcorner, yllcorner, cellsize in all_headers:
         # Calculate positions in the aligned grid
         start_row = nrows_total - int((yllcorner + nrows_sub * cellsize - min_y) / cellsize)
@@ -123,15 +124,31 @@ def merge_output_rasters(config, output_filename):
                     break  # Ensure we don't read beyond the specified number of rows
                 row_data = np.fromstring(line, dtype=float, sep=' ')
                 aligned_slice = aligned[start_row + i, start_col:end_col]
-                # Update aligned where the new value is lower or if aligned has nodata_value
-                np.minimum(aligned_slice, row_data, out=aligned_slice, where=(row_data != nodata_value))
+                sectors_slice = sectors[start_row + i, start_col:end_col]
+                # # Update aligned where the new value is lower or if aligned has nodata_value
+                # np.minimum(aligned_slice, row_data, out=aligned_slice, where=(row_data != nodata_value))
+                # Create a mask for where updates will occur
+                update_mask = (row_data != nodata_value) & (row_data < aligned_slice)
+                sectors_mask = (row_data != nodata_value) & (row_data < aligned_slice)
+                sectors_reset = (row_data == 0) 
+                # update_mask = (row_data != 0) & (row_data < aligned_slice)
+                # Update aligned array
+                aligned_slice[update_mask] = row_data[update_mask]
+                sectors_slice[sectors_mask] = sector
+                sectors_slice[sectors_reset] = nodata_value
+        sector += 1
+
 
     # Set merged data to nodata_value where data equals zero
     aligned[aligned == 0] = nodata_value
 
     # Write the merged raster
     output_path = os.path.join(config.calculation_folder, output_filename)
+    sectors_path = os.path.join(config.calculation_folder, sectors_filename)
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
     print(f"Merged raster written to {output_path}")
+    write_asc(sectors, sectors_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
+    print(f"Sector raster written to {sectors_path}")
 
     postProcess(config.calculation_folder, config.calculation_folder, config, output_path, config.merged_output_name)
+

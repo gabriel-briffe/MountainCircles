@@ -10,8 +10,6 @@ Inputs are:
 - This project is the continuation of a project that ended up in early 2024 with this interactive map covering the full Alps (different information at different zoom levels):
 https://live.glidernet.org/#c=45.26242,7.67261&z=7&m=4&s=1
 
-![mountain circles map](images/ogn.jpg)
-
 you can still download the "alpes 600dpi 2.mbtiles" at https://drive.google.com/drive/folders/1fr68iDfBMsFurlEx9bBe8ZorvOEG9Lc7?usp=sharing and share this file on your phone with Guru Maps, a free android and iphone app that allows custom map import in MBTiles format. 
 That map has the following parameters:
 - glide ratio : 20
@@ -23,12 +21,14 @@ The objective has now shifted to providing a way to quickly compute a file to di
 # Today
 for quicker export, we just have vector layers that we can switch on and off in Guru Maps:
 
-![guru map](images/gm.jpg)
+![guru map](images/overview.png)
+![guru map](images/zoomed.png)
 
 ## How to download
 ## from your phone:
+- Video tutorial [video tutorial](https://www.youtube.com/watch?v=dQw4w9WgXcQ), link to the files https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
 - install Guru Maps
-- install a nice free map background
+- install a nice free map background :
 - Option 1 (online only): adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
 - Option 2 (offline): https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing download, share with guru maps as above
 
@@ -50,7 +50,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 - the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30"
 
 ## How to use
-### !! The pictures are with glide parameters L/D 25, ground clearance 0, circuit height 250m !!
+### !! The pictures are with glide parameters L/D 25, ground clearance 0 (no margin over the passes), circuit height 250m
 - the calculated path back to the landing is always going towards the center of the arcs of circles
 - here at 2600m the way back to Albertville is not the same depending on which side of the valley we are
 - **the way north goes through a pass, it is actually a flat pass, it would be good to use at least 100m ground clearance instead of 0**
