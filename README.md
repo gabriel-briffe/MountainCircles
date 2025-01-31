@@ -52,7 +52,7 @@ for quicker export, we just have vector layers that we can switch on and off in 
 The pictures are with glide parameters L/D 25, ground clearance 100m (100m margin over the passes), circuit height 250m
 - the calculated path back to the landing is always going towards the center of the arcs of circles
 - here at 2600m the way back to Albertville is not the same depending on which side of the valley we are
-- **the way north goes through a pass, it is actually a flat pass, it would be good to use at least 100m ground clearance instead of 0**
+- the way north goes through a pass, we have 100m ground clearance.
 ![albertville.png](images/albertville.png)
 - we might be interested in finding the point at which we switch from one airfield to the next one, and know the minimum altitude at that point
 - here, **with 100m ground clearance over a flat pass to the south** it would be at Saint-laurent du pont at 1700m
