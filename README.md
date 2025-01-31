@@ -26,19 +26,18 @@ for quicker export, we just have vector layers that we can switch on and off in 
 
 ## How to download
 ## from your phone:
-- Video tutorial [video tutorial](https://www.youtube.com/watch?v=dQw4w9WgXcQ), link to the files https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
+- [Video tutorial](https://youtu.be/Bm3o6srzsl8), files [here](https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link)
 - install Guru Maps
 - install a nice free map background :
 - Option 1 (online only): adding "google maps terrain HD" background. --> https://ms.gurumaps.app/ -->share the downloaded file with guru maps
-- Option 2 (offline): https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing download, share with guru maps as above
+- Option 2 (offline): as in the video tutorial,[file here](https://drive.google.com/drive/folders/1ApDTSuf8jsdpCH97JeU6T_NIGHr8ZFPG?usp=sharing), download, share with guru maps
 
-- go to https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link
-- find the folder corresponding to the parameters you want ("L/D 20-ground 100m-circuit 250m" for example - ground 100m means ground clearance 100m, so when the way back is over a pass, the calculation puts you on glide, here 20, for a point 100m above the pass.) 
-- download everything (both **the geojson** (the data) **+ the mapcss** (the style)) in that folder.
-- share the files with Guru Maps previously installed  (go to your files explorer application -download folder- and select the files and share if needed)
+- find the [folder](https://drive.google.com/drive/folders/1nf3-rh1FVG5X43KMUsyvlxcQL0Tnapjj?usp=drive_link) corresponding to the parameters you want ("L/D 20-ground 100m-circuit 250m" for example - ground 100m means ground clearance 100m, so when the way back is over a pass, the calculation puts you on glide, here 20, for a point 100m above the pass.) 
+- download everything either the zip file or the individual files in that folder.
+- share the files with Guru Maps
 - in Guru Maps, the files should be found in the overlay section, which means you can choose the background layer that you want.
-- the layer startng by "aa_" is the recombined file of all the individual airfields.
-- You can superimpose the recombined version with an individual layer, or more, in guru maps
+- to unselect many layers, or reorganise them, access the layers via the settings button, otherwise you can only unselect one at a time.
+- the layers startng by "aa_" are the recombined file of all the individual airfields.
 
 
 ## from your mac
