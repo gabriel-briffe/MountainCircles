@@ -27,21 +27,28 @@ def convert_coord(coord_str):
     
     return dd
 
-# Load the CSV file
-df = pd.read_csv('data/waypoints/guide_aires_securite.cup')  # Skip the header row
+def convert_cup_file(input_path, output_path):
+    """Convert a CUP file to CSV with decimal degree coordinates."""
+    # Load the CSV file
+    df = pd.read_csv(input_path)
 
-# Remove the version line if it's at the beginning (assuming it's the second row)
-df = df[df['name'] != 'version=']
+    # Remove the version line if it's at the beginning
+    df = df[df['name'] != 'version=']
 
-# Convert the coordinates
-df['lat_dd'] = df['lat'].apply(convert_coord)
-df['lon_dd'] = df['lon'].apply(convert_coord)
+    # Convert the coordinates
+    df['lat_dd'] = df['lat'].apply(convert_coord)
+    df['lon_dd'] = df['lon'].apply(convert_coord)
 
-# Select only the fields you want to keep
-df = df[['name', 'lon_dd', 'lat_dd']]
+    # Select only the fields you want to keep
+    df = df[['name', 'lon_dd', 'lat_dd']]
 
-# Rename the new coordinate columns
-df.rename(columns={'lat_dd': 'y', 'lon_dd': 'x'}, inplace=True)
+    # Rename the new coordinate columns
+    df.rename(columns={'lat_dd': 'y', 'lon_dd': 'x'}, inplace=True)
 
-# If you want to save this as a new CSV:
-df.to_csv('data/waypoints/guide_aires_securite.csv', index=False)
+    # Save as CSV
+    df.to_csv(output_path, index=False)
+
+if __name__ == "__main__":
+    input_path = 'data/waypoints/guide_aires_securite.cup'
+    output_path = 'data/waypoints/guide_aires_securite.csv'
+    convert_cup_file(input_path, output_path)

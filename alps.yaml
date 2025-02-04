@@ -1,4 +1,4 @@
-name: everything 
+name: alps 
 
 input_files:
   airfield_file: ./data/airfields/full4326.csv
@@ -24,6 +24,7 @@ rendering:
 
 gurumaps: true
 exportPasses: false
-reset_results: false
+reset_results: true
+clean_temporary_files: true
 
-merged_output_name: aa_alps
+merged_output_name: merged_output

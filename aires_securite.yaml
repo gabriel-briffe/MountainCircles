@@ -25,5 +25,6 @@ rendering:
 gurumaps: true
 exportPasses: true
 reset_results: false
+clean_temporary_files: false
 
 merged_output_name: merged

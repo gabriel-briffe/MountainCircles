@@ -33,6 +33,7 @@ class Config:
         self.gurumaps = config["gurumaps"]
         self.exportPasses = config["exportPasses"]
         self.reset_results = self.clean(config["reset_results"])
+        self.clean_temporary_files = config.get("clean_temporary_files", False)  # Default to False if not specified
 
         self.merged_output_name = config["merged_output_name"]
         

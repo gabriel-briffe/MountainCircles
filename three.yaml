@@ -27,6 +27,7 @@ rendering:
 
 gurumaps: true
 exportPasses: false
+clean_temporary_files: false
 reset_results: true
 
 merged_output_name: aa_alps

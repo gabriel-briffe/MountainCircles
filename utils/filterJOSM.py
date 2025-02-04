@@ -2,6 +2,7 @@ import geopandas as gpd
 import os
 from shapely.geometry import Point
 from shapely.ops import nearest_points
+import numpy as np
 
 def find_closest_pass(mountain_passes_path, custom_points_path, output_path):
     # Load the mountain passes shapefile
@@ -57,11 +58,10 @@ def find_closest_pass(mountain_passes_path, custom_points_path, output_path):
     else:
         print("No matches found within 2km or all results were duplicates")
 
-
-# Path to your shapefiles
-mountain_passes_path = "data/passes/passesosmpyr.shp"
-custom_points_path = "data/passes/passesfromcalc4326pyr.shp"
-output_path = "results/passes/passes4326pyr.shp"
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-find_closest_pass(mountain_passes_path, custom_points_path, output_path)
+# Add this to prevent automatic execution when imported
+if __name__ == "__main__":
+    # Code that should only run when the script is executed directly
+    mountain_passes_path = "data/passes/passesosmpyr.shp"
+    custom_points_path = "data/passes/passesfromcalc4326pyr.shp"
+    output_path = "results/passes/passes4326pyr.shp"
+    find_closest_pass(mountain_passes_path, custom_points_path, output_path)

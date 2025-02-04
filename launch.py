@@ -102,9 +102,12 @@ def main(config_file):
     with multiprocessing.Pool() as pool:
         pool.starmap(make_individuals, [(airfield, config) for airfield in converted_airfields])
 
-    # # Merge all output_sub.asc files
+    # Merge all output_sub.asc files
     merge_output_rasters(config, f'{config.merged_output_name}.asc', f'{config.merged_output_name}_sectors.asc')
-    clean(config)
+    
+    # Only clean if clean_temporary_files is True
+    if config.clean_temporary_files:
+        clean(config)
 
 
 
