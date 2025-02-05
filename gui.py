@@ -120,19 +120,21 @@ class MountainCirclesGUI:
         airfield_buttons_frame.grid(row=2, column=2, sticky=tk.W)
         
         ttk.Button(airfield_buttons_frame, text="Browse", 
-                  command=lambda: self.browse_file("Airfield File", self.airfield_path)).pack(side=tk.LEFT, padx=2)
+                  command=lambda: self.browse_file("Airfield File", self.airfield_path)).grid(row=0, column=0, padx=2)
         ttk.Button(airfield_buttons_frame, text="Open/edit", 
-                  command=self.open_airfield_file).pack(side=tk.LEFT, padx=2)
+                  command=self.open_airfield_file).grid(row=0, column=1, padx=2)
         
         # Topography file selection
         ttk.Label(self.param_frame, text="Topography File:").grid(row=3, column=0, sticky=tk.W)
         ttk.Entry(self.param_frame, textvariable=self.topo_path, width=50).grid(row=3, column=1, padx=5)
-        ttk.Button(self.param_frame, text="Browse", command=lambda: self.browse_file("Topography File", self.topo_path)).grid(row=3, column=2)
+        ttk.Button(self.param_frame, text="Browse", 
+                  command=lambda: self.browse_file("Topography File", self.topo_path)).grid(row=3, column=2)
         
         # Result folder selection
         ttk.Label(self.param_frame, text="Result Folder:").grid(row=4, column=0, sticky=tk.W)
         ttk.Entry(self.param_frame, textvariable=self.result_path, width=50).grid(row=4, column=1, padx=5)
-        ttk.Button(self.param_frame, text="Browse", command=lambda: self.browse_file("Result Folder", self.result_path)).grid(row=4, column=2)
+        ttk.Button(self.param_frame, text="Browse", 
+                  command=lambda: self.browse_directory("Results Folder", self.result_path)).grid(row=4, column=2)
         
         # Glide Parameters Section
         ttk.Label(self.param_frame, text="Glide Parameters", font=('Arial', 10, 'bold')).grid(row=5, column=0, sticky=tk.W, pady=(15,5))
@@ -278,69 +280,80 @@ class MountainCirclesGUI:
         ttk.Button(cup_frame, text="Convert CUP to CSV", 
                   command=self.convert_cup_file).grid(row=2, column=0, columnspan=3, pady=10)
         
-        # Mountain Passes Merger Section
-        passes_frame = ttk.LabelFrame(utilities_main_frame, text="Mountain Passes Merger", padding="5")
-        passes_frame.pack(fill="x", pady=5)
+        # Process Passes Section
+        process_passes_frame = ttk.LabelFrame(utilities_main_frame, text="Process Mountain Passes", padding="5")
+        process_passes_frame.pack(fill="x", pady=5)
         
-        # Root folder selection
-        ttk.Label(passes_frame, text="Results folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.passes_root_path = tk.StringVar()
-        ttk.Entry(passes_frame, textvariable=self.passes_root_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(passes_frame, text="Browse", 
-                  command=lambda: self.browse_directory("Results Folder", self.passes_root_path)).grid(row=0, column=2)
+        # Parent folder selection
+        ttk.Label(process_passes_frame, text="Parent folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.process_passes_root_path = tk.StringVar()
+        ttk.Entry(process_passes_frame, textvariable=self.process_passes_root_path, width=50).grid(row=0, column=1, padx=5)
+        ttk.Button(process_passes_frame, text="Browse", 
+                  command=lambda: self.browse_directory("Parent Folder", self.process_passes_root_path)).grid(row=0, column=2)
         
-        # Merge button
-        ttk.Button(passes_frame, text="Merge Mountain Passes", 
-                  command=self.merge_mountain_passes).grid(row=1, column=0, columnspan=3, pady=10)
+        # Mountain passes reference shapefile
+        ttk.Label(process_passes_frame, text="Reference Passes:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.ref_mountain_passes_path = tk.StringVar(value=os.path.join("data", "passes", "passes_osm_4326.shp"))
+        ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path, width=50).grid(row=1, column=1, padx=5)
+        ttk.Button(process_passes_frame, text="Browse", 
+                  command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, 
+                                                 [("Shapefile", "*.shp")])).grid(row=1, column=2)
         
-        # JOSM Filter Section
-        josm_frame = ttk.LabelFrame(utilities_main_frame, text="JOSM Pass Filter", padding="5")
-        josm_frame.pack(fill="x", pady=5)
+        # Help section
+        self.help_visible = False
+        help_button = ttk.Button(process_passes_frame, text="Show Help ▼", 
+                                command=lambda: self.toggle_help_section(help_button, help_frame))
+        help_button.grid(row=2, column=0, columnspan=3, pady=(10,0), sticky='ew')
         
-        # Mountain passes shapefile selection
-        ttk.Label(josm_frame, text="Mountain Passes file:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.mountain_passes_path = tk.StringVar(value=os.path.join("data", "passes", "passesosmpyr.shp"))
-        ttk.Entry(josm_frame, textvariable=self.mountain_passes_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(josm_frame, text="Browse", 
-                  command=lambda: self.browse_file("Shapefile", self.mountain_passes_path, 
-                                                 [("Shapefile", "*.shp")], 
-                                                 initialdir=os.path.join("data", "passes"))).grid(row=0, column=2)
+        # Help content frame (initially hidden)
+        help_frame = ttk.Frame(process_passes_frame)
+        help_frame.grid(row=3, column=0, columnspan=3, sticky='ew', padx=5)
+        help_frame.grid_remove()  # Initially hidden
         
-        # Custom points shapefile selection
-        ttk.Label(josm_frame, text="Custom Points file:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.custom_points_path = tk.StringVar(value=os.path.join("data", "passes", "passesfromcalc4326pyr.shp"))
-        ttk.Entry(josm_frame, textvariable=self.custom_points_path, width=50).grid(row=1, column=1, padx=5)
-        ttk.Button(josm_frame, text="Browse", 
-                  command=lambda: self.browse_file("Shapefile", self.custom_points_path, 
-                                                 [("Shapefile", "*.shp")],
-                                                 initialdir=os.path.join("data", "passes"))).grid(row=1, column=2)
+        help_text = """This tool processes mountain passes data in three steps:
+
+1. Collection: Gathers and merges all CSV files containing pass data from the parent folder and all subfolders. For example if you run full alps calculation with "create_mountain_passes" set to true for L/D 20, 25, 30, select as parent folder "results/alps".
+2. Conversion: Converts the collected data and transforms it to the correct coordinate system.
+3. Filtering: Compares with known passes from Open Street Map database and keeps only the closest matches, thus getting proper location, names, and altitudes. This file needs to be a shp file, you can make it from OSM data, using overpass turbo or other tools, or download from https://www.geofabrik.de/ or https://download.geofabrik.de/.
+
+Output will be saved in:
+parent_folder/processed_passes/processed_passes.shp"""
         
-        # Output shapefile selection
-        ttk.Label(josm_frame, text="Output file:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.josm_output_path = tk.StringVar(value=os.path.join("results", "passes", "passes4326pyr.shp"))
-        ttk.Entry(josm_frame, textvariable=self.josm_output_path, width=50).grid(row=2, column=1, padx=5)
-        ttk.Button(josm_frame, text="Browse", 
-                  command=lambda: self.browse_save_file("Shapefile", self.josm_output_path, 
-                                                      [("Shapefile", "*.shp")],
-                                                      initialdir=os.path.join("results", "passes"))).grid(row=2, column=2)
+        help_label = ttk.Label(help_frame, text=help_text, justify='left', wraplength=450)
+        help_label.pack(pady=10)
         
-        # Filter button
-        ttk.Button(josm_frame, text="Filter Passes", 
-                  command=self.filter_josm_passes).grid(row=3, column=0, columnspan=3, pady=10)
+        # Process button
+        ttk.Button(process_passes_frame, text="Process Passes", 
+                  command=self.process_passes).grid(row=4, column=0, columnspan=3, pady=10)
 
     def browse_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a file and update the corresponding variable"""
+        # Set default initial directories based on file type
+        if initialdir is None:
+            if file_type == "Airfield File":
+                initialdir = os.path.join("data", "airfields")
+            elif file_type == "Topography File":
+                initialdir = os.path.join("data", "topography")
+            elif file_type == "Reference Passes":
+                initialdir = os.path.join("data", "passes")
+            else:
+                initialdir = "."
+        
+        # Create directory if it doesn't exist
+        os.makedirs(initialdir, exist_ok=True)
+        
+        # Default filetypes if none provided
         if filetypes is None:
             filetypes = [("All files", "*.*")]
-            
+        
         path = filedialog.askopenfilename(
             title=f"Select {file_type}",
-            filetypes=filetypes,
-            initialdir=initialdir
+            initialdir=initialdir,
+            filetypes=filetypes
         )
         if path:
             var.set(path)
-            
+
     def browse_save_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a save location and update the corresponding variable"""
         if filetypes is None:
@@ -734,48 +747,59 @@ class MountainCirclesGUI:
     
     def browse_directory(self, dir_type, var):
         """Browse for a directory and update the corresponding variable"""
-        # Set default directory to ./results for the mountain passes utility
-        initial_dir = os.path.join(".", "results") if dir_type == "Results Folder" else "."
+        # Set default initial directory based on directory type
+        if dir_type == "Results Folder" or dir_type == "Parent Folder":
+            initialdir = os.path.join(".", "results")
+        else:
+            initialdir = "."
+        
+        # Create directory if it doesn't exist
+        os.makedirs(initialdir, exist_ok=True)
         
         path = filedialog.askdirectory(
             title=f"Select {dir_type}",
-            initialdir=initial_dir
+            initialdir=initialdir
         )
         if path:
             var.set(path)
             
-    def merge_mountain_passes(self):
-        """Merge mountain passes CSV files using passes.py logic"""
-        root_folder = self.passes_root_path.get()
+    def process_passes(self):
+        """Process mountain passes using process_passes.py logic"""
+        root_folder = self.process_passes_root_path.get()
+        mountain_passes_path = self.ref_mountain_passes_path.get()
         
-        if not root_folder:
-            messagebox.showerror("Error", "Please select a results folder.")
+        if not all([root_folder, mountain_passes_path]):
+            messagebox.showerror("Error", "Please select all required paths.")
             return
-            
+        
         try:
-            collect_and_merge_csv_files(root_folder)
-            messagebox.showinfo("Success", "Mountain passes merged successfully!")
+            from utils.process_passes import process_passes
+            # Custom CRS for the Alps region
+            input_crs = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
+            
+            # Create output directory in the parent folder
+            output_dir = os.path.join(root_folder, "processed_passes")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            # Set paths for intermediate and output files
+            intermediate_path = os.path.join(output_dir, "intermediate_passes.shp")
+            output_path = os.path.join(output_dir, "processed_passes.shp")
+            
+            process_passes(root_folder, input_crs, intermediate_path, mountain_passes_path, output_path)
+            messagebox.showinfo("Success", "Passes processed successfully!")
             
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to merge mountain passes: {str(e)}")
+            messagebox.showerror("Error", f"Failed to process passes: {str(e)}")
     
-    def filter_josm_passes(self):
-        """Filter mountain passes using filterJOSM.py logic"""
-        mountain_passes_path = self.mountain_passes_path.get()
-        custom_points_path = self.custom_points_path.get()
-        output_path = self.josm_output_path.get()
-        
-        if not all([mountain_passes_path, custom_points_path, output_path]):
-            messagebox.showerror("Error", "Please select all required files.")
-            return
-            
-        try:
-            from utils.filterJOSM import find_closest_pass
-            find_closest_pass(mountain_passes_path, custom_points_path, output_path)
-            messagebox.showinfo("Success", "Passes filtered successfully!")
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to filter passes: {str(e)}")
+    def toggle_help_section(self, button, help_frame):
+        """Toggle the visibility of the help section"""
+        self.help_visible = not self.help_visible
+        if self.help_visible:
+            help_frame.grid()
+            button.configure(text="Hide Help ▲")
+        else:
+            help_frame.grid_remove()
+            button.configure(text="Show Help ▼")
     
     class TextRedirector:
         """Redirect stdout to the text widget"""

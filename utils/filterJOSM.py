@@ -13,7 +13,7 @@ def find_closest_pass(mountain_passes_path, custom_points_path, output_path):
     # Create a spatial index for faster queries
     passes_sindex = passes.sindex
 
-    # Define the buffer distance (2km)
+    # Define the buffer distance
     buffer_distance = 1000  # in meters, assuming the CRS is in meters
 
     # Function to find the nearest pass within 2km
