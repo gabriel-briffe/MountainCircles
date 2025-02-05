@@ -74,7 +74,6 @@ class Config:
 
     def create_calculation_folder(self):
         dir_path = os.path.join(self.result_folder_path,f'{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}-{self.max_altitude}')
-        # dir_path = f"{result_folder_path}/{glide_ratio}-{ground_clearance}-{circuit_height}-{max_altitude}"
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         return dir_path
