@@ -2,7 +2,6 @@ import geopandas as gpd
 import os
 from shapely.geometry import Point
 from shapely.ops import nearest_points
-import numpy as np
 
 def find_closest_pass(mountain_passes_path, custom_points_path, output_path):
     # Load the mountain passes shapefile

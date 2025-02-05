@@ -1,76 +1,154 @@
 import os
 import shutil
-import subprocess
 import json
+from osgeo import gdal, ogr, osr
 
 
 def generate_contours(inThisFolder, config, ASCfilePath, contourFileName):
-    """Generate contour lines from the input raster file using gdal_contour from the specified Conda environment."""
+    """Generate contour lines from the input raster file using GDAL Python bindings."""
     try:
         # Paths for input ASC file and output GPKG
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-
-        # Construct the command to run gdal_contour in the specified conda environment
-        command = [
-            "gdal_contour", 
-            '-b', '1', 
-            '-a', 'ELEV', 
-            '-i', str(config.contour_height), 
-            '-f', 'GPKG', 
-            ASCfilePath, 
-            gpkg_path
-        ]
         
-        # Execute the command and capture output for debugging purposes
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        # Open the raster dataset
+        ds = gdal.Open(ASCfilePath)
+        if ds is None:
+            raise Exception("Could not open raster dataset")
+            
+        # Get the first band
+        band = ds.GetRasterBand(1)
         
-        # Check if the command was successful
-        if result.returncode == 0:
-            print(f"Contours created in {inThisFolder}")
-        else:
-            print("Command failed to execute successfully.")
-            print("Error output:", result.stderr)
-            print("Standard output:", result.stdout)
+        # Get nodata value from the band
+        nodata = band.GetNoDataValue()
+        if nodata is None:
+            nodata = -9999  # Default nodata value if none is set
+        
+        # Create the output vector dataset
+        driver = ogr.GetDriverByName('GPKG')
+        if os.path.exists(gpkg_path):
+            driver.DeleteDataSource(gpkg_path)
+        
+        # Create new GeoPackage
+        contour_ds = driver.CreateDataSource(gpkg_path)
+        
+        # Create spatial reference from input
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(ds.GetProjection())
+        
+        # Create the layer
+        contour_layer = contour_ds.CreateLayer('contour', srs=srs, geom_type=ogr.wkbLineString)
+        
+        # Add elevation field
+        field_defn = ogr.FieldDefn('ELEV', ogr.OFTReal)
+        contour_layer.CreateField(field_defn)
+        
+        # Generate the contours
+        gdal.ContourGenerate(band, 
+                           config.contour_height,  # Contour interval
+                           0,                      # Base contour
+                           [],                     # Fixed levels
+                           1,                      # Use nodata flag
+                           nodata,                 # No data value
+                           contour_layer,          # Output layer
+                           0,                      # ID field
+                           0)                      # Elevation field
+        
+        # Clean up
+        contour_ds = None
+        ds = None
+        
+        print(f"Contours created in {inThisFolder}")
 
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred while creating contours: {e}")
-        print("Error output:", e.stderr)
-    except FileNotFoundError as e:
-        print(f"Environment or executable not found: {e}")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
 
 def create4326geosonContours(inThisFolder, config, contourFileName):
-    """Generate contour lines from the input raster file using gdal_contour from the specified Conda environment."""
+    """Generate contour lines in GeoJSON format using GDAL/OGR Python bindings."""
     try:
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
         geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
 
-        command = [
-            "ogr2ogr",
-            "-f", "GeoJSON",
-            "-s_srs", f"{config.CRS}",
-            "-t_srs", "EPSG:4326",
-            "-sql", f"SELECT CAST(CAST(ELEV AS INTEGER) AS TEXT) AS ELEV, * FROM \"contour\"",  #here contour is the layer, name, do not modify!
-            "-nln", "OGRGeoJSON",
-            geojson_path,
-            gpkg_path
-        ]
+        # Open input GPKG
+        in_driver = ogr.GetDriverByName('GPKG')
+        in_ds = in_driver.Open(gpkg_path, 0)  # 0 means read-only
+        if in_ds is None:
+            raise Exception("Could not open input GPKG")
 
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"Contours converted to GeoJSON in EPSG:4326: {geojson_path}")
-        else:
-            print("Command failed to execute successfully.")
-            print("Error output:", result.stderr)
-            print("Standard output:", result.stdout)      
+        # Get input layer
+        in_layer = in_ds.GetLayer('contour')
+        if in_layer is None:
+            raise Exception("Could not get contour layer from GPKG")
 
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred while converting contours: {e}")
-        print("Error output:", e.stderr)
-    except FileNotFoundError as e:
-        print(f"Environment or executable not found: {e}")
+        # Create output GeoJSON
+        out_driver = ogr.GetDriverByName('GeoJSON')
+        if os.path.exists(geojson_path):
+            out_driver.DeleteDataSource(geojson_path)
+        out_ds = out_driver.CreateDataSource(geojson_path)
+
+        # Create spatial reference objects
+        source_srs = osr.SpatialReference()
+        source_srs.ImportFromProj4(config.CRS)
+        source_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(4326)
+        target_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        
+        # Create coordinate transformation
+        transform = osr.CoordinateTransformation(source_srs, target_srs)
+
+        # Create output layer
+        out_layer = out_ds.CreateLayer('OGRGeoJSON', target_srs, in_layer.GetGeomType())
+
+        # Add fields to output layer - make ELEV a String field
+        in_layer_defn = in_layer.GetLayerDefn()
+        for i in range(in_layer_defn.GetFieldCount()):
+            field_defn = in_layer_defn.GetFieldDefn(i)
+            if field_defn.GetName() == 'ELEV':
+                new_field_defn = ogr.FieldDefn('ELEV', ogr.OFTString)
+                out_layer.CreateField(new_field_defn)
+            else:
+                out_layer.CreateField(field_defn)
+
+        # Get output layer definition
+        out_layer_defn = out_layer.GetLayerDefn()
+
+        # Process each feature
+        in_feature = in_layer.GetNextFeature()
+        while in_feature:
+            # Get geometry and transform it
+            geom = in_feature.GetGeometryRef().Clone()  # Clone to avoid modifying original
+            geom.Transform(transform)
+
+            # Create output feature
+            out_feature = ogr.Feature(out_layer_defn)
+            out_feature.SetGeometry(geom)
+
+            # Copy attributes
+            for i in range(in_layer_defn.GetFieldCount()):
+                field_name = in_layer_defn.GetFieldDefn(i).GetName()
+                if field_name == 'ELEV':
+                    # Convert ELEV to string of integer (no decimals)
+                    elev_value = str(int(float(in_feature.GetField(i))))
+                    out_feature.SetField(i, elev_value)
+                else:
+                    out_feature.SetField(i, in_feature.GetField(i))
+
+            # Add feature to output layer
+            out_layer.CreateFeature(out_feature)
+
+            # Clean up
+            out_feature = None
+            geom = None
+            in_feature = in_layer.GetNextFeature()
+
+        # Clean up
+        in_ds = None
+        out_ds = None
+
+        print(f"Contours converted to GeoJSON in EPSG:4326: {geojson_path}")
+
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
@@ -128,14 +206,8 @@ def copyMapCss(toThatFolder, config, contourFileName,extension):
         shutil.copy2(config.mapcssTemplate, mapcss_file)
         print(f"mapcss copied successfully to {mapcss_file}")
 
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred while creating contours: {e}")
-    except FileNotFoundError as e:
-        print(f"Environment or executable not found: {e}")
-
-
-
-
+    except Exception as e:
+        print(f"Failed to copy mapcss file: {e}")
 
 
 def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName):

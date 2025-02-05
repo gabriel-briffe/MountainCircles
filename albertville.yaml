@@ -17,14 +17,14 @@ glide_parameters:
   circuit_height: 250
 
 calculation_parameters:
-  max_altitude: 900
+  max_altitude: 1500
 
 rendering:
   contour_height: 100
 
 gurumaps: true
-exportPasses: true
+exportPasses: false
 reset_results: true
-clean_temporary_files: true
+clean_temporary_files: false
 
 merged_output_name: merged_output
