@@ -10,4 +10,7 @@
 /compute.exe
 **/*exe
 **/*.pyc
-compute
+compute_mac
+build
+dist
+resources
