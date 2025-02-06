@@ -2,7 +2,7 @@ name: aires_securite
 
 input_files:
   airfield_file: ./data/airfields/guide_aires_securite.csv
-  topography_file: ./data/topography/alosalpscustomLCC100m.asc
+  topography_file: ./data/topography/alps_topography.asc
   result_folder: ./results/aires_securite
   compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
@@ -27,4 +27,4 @@ exportPasses: true
 reset_results: false
 clean_temporary_files: false
 
-merged_output_name: merged
+merged_output_name: merged_output

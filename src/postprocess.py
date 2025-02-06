@@ -1,156 +1,113 @@
 import os
 import shutil
 import json
-from osgeo import gdal, ogr, osr
+import numpy as np
+import skimage.measure
+from shapely.geometry import LineString
+import geopandas as gpd
+from rasterio.transform import from_origin
+import pyproj
 
-
-def generate_contours(inThisFolder, config, ASCfilePath, contourFileName):
-    """Generate contour lines from the input raster file using GDAL Python bindings."""
+def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName):
+    """
+    Generates contour lines from an ASCII Grid (.asc) file using NumPy and scikit-image.
+    Contours are generated from 0 to max elevation with the given interval.
+    """
     try:
-        # Paths for input ASC file and output GPKG
+        # Read the ASC file
+        with open(ASCfilePath, 'r') as f:
+            header = [next(f).strip().split() for _ in range(6)]
+            data = np.loadtxt(f)
+
+        # Extract header information
+        ncols = int(header[0][1])
+        nrows = int(header[1][1])
+        xllcorner = float(header[2][1])
+        yllcorner = float(header[3][1])
+        cellsize = float(header[4][1])
+        nodata_value = float(header[5][1])
+
+        # Create an affine transformation
+        transform = from_origin(xllcorner, yllcorner + nrows * cellsize, cellsize, cellsize)
+
+        # Replace NoData values with NaN for proper handling in contouring
+        data[data == nodata_value] = np.nan
+
+        # Print min and max values
+        data_min = np.nanmin(data)
+        data_max = np.nanmax(data)
+
+        # Generate contours for all elevations
+        contour_levels = np.arange(0, min(data_max + config.contour_height, nodata_value), config.contour_height)
+        all_contours = []
+
+        for level in contour_levels:
+            contours = skimage.measure.find_contours(data, level)
+            all_contours.extend(contours)
+
+        # Create a list to store the contour geometries and elevations
+        contour_geometries = []
+        contour_elevations = []
+
+        # Iterate over all contours
+        for contour, level in zip(all_contours, [level for level in contour_levels for _ in range(len(skimage.measure.find_contours(data, level)))]):
+            lines = []
+            for i in range(len(contour)):
+                y, x = contour[i]
+                lon, lat = transform * (x, y)
+                lines.append((lon, lat))
+            line = LineString(lines)
+            contour_geometries.append(line)
+            contour_elevations.append(level)
+
+        # Create a GeoDataFrame from the contour geometries and elevations
+        gdf = gpd.GeoDataFrame(
+            {'ELEV': contour_elevations},
+            geometry=contour_geometries,
+            crs=config.CRS
+        )
+
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-        
-        # Open the raster dataset
-        ds = gdal.Open(ASCfilePath)
-        if ds is None:
-            raise Exception("Could not open raster dataset")
-            
-        # Get the first band
-        band = ds.GetRasterBand(1)
-        
-        # Get nodata value from the band
-        nodata = band.GetNoDataValue()
-        if nodata is None:
-            nodata = -9999  # Default nodata value if none is set
-        
-        # Create the output vector dataset
-        driver = ogr.GetDriverByName('GPKG')
-        if os.path.exists(gpkg_path):
-            driver.DeleteDataSource(gpkg_path)
-        
-        # Create new GeoPackage
-        contour_ds = driver.CreateDataSource(gpkg_path)
-        
-        # Create spatial reference from input
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(ds.GetProjection())
-        
-        # Create the layer
-        contour_layer = contour_ds.CreateLayer('contour', srs=srs, geom_type=ogr.wkbLineString)
-        
-        # Add elevation field
-        field_defn = ogr.FieldDefn('ELEV', ogr.OFTReal)
-        contour_layer.CreateField(field_defn)
-        
-        # Generate the contours
-        gdal.ContourGenerate(band, 
-                           config.contour_height,  # Contour interval
-                           0,                      # Base contour
-                           [],                     # Fixed levels
-                           1,                      # Use nodata flag
-                           nodata,                 # No data value
-                           contour_layer,          # Output layer
-                           0,                      # ID field
-                           0)                      # Elevation field
-        
-        # Clean up
-        contour_ds = None
-        ds = None
-        
-        print(f"Contours created in {inThisFolder}")
+        # Write the GeoDataFrame to a GeoPackage file
+        gdf.to_file(gpkg_path, driver='GPKG', layer='contour')
+
+        print(f"Contours created successfully in {inThisFolder}")
 
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"An error occurred: {e}")
 
 
-def create4326geosonContours(inThisFolder, config, contourFileName):
-    """Generate contour lines in GeoJSON format using GDAL/OGR Python bindings."""
+
+def create4326geosonContours_no_gdal(inThisFolder, config, contourFileName):
+    """
+    Convert contours to GeoJSON in EPSG:4326 without GDAL (ogr/osr).
+    """
     try:
         gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
         geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
 
-        # Open input GPKG
-        in_driver = ogr.GetDriverByName('GPKG')
-        in_ds = in_driver.Open(gpkg_path, 0)  # 0 means read-only
-        if in_ds is None:
-            raise Exception("Could not open input GPKG")
+        # Read GeoPackage using GeoPandas
+        # Try without specifying layer name first
+        gdf = gpd.read_file(gpkg_path)
+        # Define coordinate transformations
+        # source_crs = pyproj.CRS(config.CRS)
+        target_crs = pyproj.CRS("EPSG:4326")
+        # transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
 
-        # Get input layer
-        in_layer = in_ds.GetLayer('contour')
-        if in_layer is None:
-            raise Exception("Could not get contour layer from GPKG")
+        # Reproject the GeoDataFrame using GeoPandas' built-in method
+        gdf = gdf.to_crs(target_crs)
 
-        # Create output GeoJSON
-        out_driver = ogr.GetDriverByName('GeoJSON')
-        if os.path.exists(geojson_path):
-            out_driver.DeleteDataSource(geojson_path)
-        out_ds = out_driver.CreateDataSource(geojson_path)
+        # Convert ELEV to string
+        gdf['ELEV'] = gdf['ELEV'].astype(int).astype(str)
 
-        # Create spatial reference objects
-        source_srs = osr.SpatialReference()
-        source_srs.ImportFromProj4(config.CRS)
-        source_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-
-        target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(4326)
-        target_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-        
-        # Create coordinate transformation
-        transform = osr.CoordinateTransformation(source_srs, target_srs)
-
-        # Create output layer
-        out_layer = out_ds.CreateLayer('OGRGeoJSON', target_srs, in_layer.GetGeomType())
-
-        # Add fields to output layer - make ELEV a String field
-        in_layer_defn = in_layer.GetLayerDefn()
-        for i in range(in_layer_defn.GetFieldCount()):
-            field_defn = in_layer_defn.GetFieldDefn(i)
-            if field_defn.GetName() == 'ELEV':
-                new_field_defn = ogr.FieldDefn('ELEV', ogr.OFTString)
-                out_layer.CreateField(new_field_defn)
-            else:
-                out_layer.CreateField(field_defn)
-
-        # Get output layer definition
-        out_layer_defn = out_layer.GetLayerDefn()
-
-        # Process each feature
-        in_feature = in_layer.GetNextFeature()
-        while in_feature:
-            # Get geometry and transform it
-            geom = in_feature.GetGeometryRef().Clone()  # Clone to avoid modifying original
-            geom.Transform(transform)
-
-            # Create output feature
-            out_feature = ogr.Feature(out_layer_defn)
-            out_feature.SetGeometry(geom)
-
-            # Copy attributes
-            for i in range(in_layer_defn.GetFieldCount()):
-                field_name = in_layer_defn.GetFieldDefn(i).GetName()
-                if field_name == 'ELEV':
-                    # Convert ELEV to string of integer (no decimals)
-                    elev_value = str(int(float(in_feature.GetField(i))))
-                    out_feature.SetField(i, elev_value)
-                else:
-                    out_feature.SetField(i, in_feature.GetField(i))
-
-            # Add feature to output layer
-            out_layer.CreateFeature(out_feature)
-
-            # Clean up
-            out_feature = None
-            geom = None
-            in_feature = in_layer.GetNextFeature()
-
-        # Clean up
-        in_ds = None
-        out_ds = None
+        # Write to GeoJSON using GeoPandas
+        gdf.to_file(geojson_path, driver='GeoJSON')
 
         print(f"Contours converted to GeoJSON in EPSG:4326: {geojson_path}")
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
+
 
 
 def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName):
@@ -211,9 +168,9 @@ def copyMapCss(toThatFolder, config, contourFileName,extension):
 
 
 def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName):
-    generate_contours(inThisFolder, config, ASCfilePath, contourFileName)
+    generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName)
     if (config.gurumaps):
-        create4326geosonContours(inThisFolder, config, contourFileName)
+        create4326geosonContours_no_gdal(inThisFolder, config, contourFileName)
         # copyMapCss(inThisFolder, config, contourFileName,"_noAirfields")
         merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName)
         copyMapCss(toThatFolder, config, contourFileName,"")

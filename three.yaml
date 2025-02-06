@@ -2,17 +2,14 @@ name: three
 
 input_files:
   airfield_file: ./data/airfields/three.csv
-  topography_file: ./data/topography/alosalpscustomLCC100m.asc
+  topography_file: ./data/topography/alps_topography.asc
   result_folder: ./results/three
   compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:
   name: 100001
-  # alps:
   definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
-  # pyrenees:
-  # definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
 
 glide_parameters:
   glide_ratio: 25
@@ -20,14 +17,14 @@ glide_parameters:
   circuit_height: 250
 
 calculation_parameters:
-  max_altitude: 3000
+  max_altitude: 2000
 
 rendering:
   contour_height: 100
 
 gurumaps: true
 exportPasses: false
-clean_temporary_files: false
 reset_results: true
+clean_temporary_files: true
 
-merged_output_name: aa_alps
+merged_output_name: merged_output

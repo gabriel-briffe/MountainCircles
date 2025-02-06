@@ -2,7 +2,7 @@ name: albertville
 
 input_files:
   airfield_file: ./data/airfields/albertville4326.csv
-  topography_file: ./data/topography/alosalpscustomLCC100m.asc
+  topography_file: ./data/topography/alps_topography.asc
   result_folder: ./results/albertville
   compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss

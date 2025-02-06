@@ -9,8 +9,15 @@ from src.config import Config
 import launch
 import subprocess
 from utils.cupConvert import convert_coord
-from utils.passes import collect_and_merge_csv_files
-from utils.filterJOSM import find_closest_pass
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 class MountainCirclesGUI:
     def __init__(self, root):
@@ -293,7 +300,7 @@ class MountainCirclesGUI:
         
         # Mountain passes reference shapefile
         ttk.Label(process_passes_frame, text="Reference Passes:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.ref_mountain_passes_path = tk.StringVar(value=os.path.join("data", "passes", "passes_osm_4326.shp"))
+        self.ref_mountain_passes_path = tk.StringVar(value=resource_path(os.path.join("data", "passes", "passes_osm_4326.shp")))
         ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path, width=50).grid(row=1, column=1, padx=5)
         ttk.Button(process_passes_frame, text="Browse", 
                   command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, 
@@ -331,11 +338,11 @@ parent_folder/processed_passes/processed_passes.shp"""
         # Set default initial directories based on file type
         if initialdir is None:
             if file_type == "Airfield File":
-                initialdir = os.path.join("data", "airfields")
+                initialdir = resource_path(os.path.join("data", "airfields"))
             elif file_type == "Topography File":
-                initialdir = os.path.join("data", "topography")
+                initialdir = resource_path(os.path.join("data", "topography"))
             elif file_type == "Reference Passes":
-                initialdir = os.path.join("data", "passes")
+                initialdir = resource_path(os.path.join("data", "passes"))
             else:
                 initialdir = "."
         
@@ -370,8 +377,8 @@ parent_folder/processed_passes/processed_passes.shp"""
             
     def convert_cup_file(self):
         """Convert CUP file to CSV using cupConvert.py logic"""
-        input_path = self.cup_input_path.get()
-        output_path = self.cup_output_path.get()
+        input_path = resource_path(self.cup_input_path.get())
+        output_path = resource_path(self.cup_output_path.get())
         
         if not input_path or not output_path:
             messagebox.showerror("Error", "Please select both input and output files.")
@@ -417,9 +424,9 @@ parent_folder/processed_passes/processed_passes.shp"""
                 
             # Update GUI fields with loaded values
             self.name.set(config.get('name', 'gui_generated'))
-            self.airfield_path.set(config['input_files']['airfield_file'])
-            self.topo_path.set(config['input_files']['topography_file'])
-            self.result_path.set(config['input_files']['result_folder'])
+            self.airfield_path.set(resource_path(config['input_files']['airfield_file']))
+            self.topo_path.set(resource_path(config['input_files']['topography_file']))
+            self.result_path.set(resource_path(config['input_files']['result_folder']))
             
             self.glide_ratio.set(str(config['glide_parameters']['glide_ratio']))
             self.ground_clearance.set(str(config['glide_parameters']['ground_clearance']))
@@ -442,7 +449,7 @@ parent_folder/processed_passes/processed_passes.shp"""
             config = self.create_config_dict()
             
             # Create filename from config name
-            filename = f"{self.name.get().strip()}.yaml"
+            filename = resource_path(f"{self.name.get().strip()}.yaml")
             
             # Check if file exists
             if os.path.exists(filename):
@@ -520,8 +527,8 @@ parent_folder/processed_passes/processed_passes.shp"""
                 ("airfield_file", self.airfield_path.get()),
                 ("topography_file", self.topo_path.get()),
                 ("result_folder", self.result_path.get()),
-                ("compute", os.path.join(".", "compute.exe")),
-                ("mapcssTemplate", os.path.join(".", "templates", "mapcss.mapcss"))
+                ("compute", resource_path(os.path.join(".", "compute.exe"))),
+                ("mapcssTemplate", resource_path(os.path.join(".", "templates", "mapcss.mapcss")))
             ])),
             
             ("CRS", OrderedDict([
@@ -578,7 +585,7 @@ parent_folder/processed_passes/processed_passes.shp"""
             config = self.create_config_dict()
             
             # Create temporary config file
-            temp_config_path = os.path.join(self.result_path.get(), "temp_config.yaml")
+            temp_config_path = resource_path(os.path.join(self.result_path.get(), "temp_config.yaml"))
             
             with open(temp_config_path, 'w') as f:
                 # Write the config in the same format as save_config
@@ -629,7 +636,7 @@ parent_folder/processed_passes/processed_passes.shp"""
     def process_data(self, config_path):
         """Run the main processing function"""
         try:
-            launch.main(config_path)
+            launch.main(resource_path(config_path))
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message
@@ -680,7 +687,7 @@ parent_folder/processed_passes/processed_passes.shp"""
     
     def open_results_folder(self):
         """Open the results folder in the system's file explorer"""
-        result_path = self.result_path.get()
+        result_path = resource_path(self.result_path.get())
         if not result_path:
             messagebox.showwarning("Warning", "Please select a result folder first.")
             return
@@ -699,7 +706,7 @@ parent_folder/processed_passes/processed_passes.shp"""
     
     def open_airfield_file(self):
         """Open the airfield file with system's default application or let user choose"""
-        file_path = self.airfield_path.get()
+        file_path = resource_path(self.airfield_path.get())
         
         if not file_path:
             messagebox.showwarning("Warning", "Please select an airfield file first.")
@@ -749,7 +756,7 @@ parent_folder/processed_passes/processed_passes.shp"""
         """Browse for a directory and update the corresponding variable"""
         # Set default initial directory based on directory type
         if dir_type == "Results Folder" or dir_type == "Parent Folder":
-            initialdir = os.path.join(".", "results")
+            initialdir = resource_path(os.path.join(".", "results"))
         else:
             initialdir = "."
         
@@ -765,8 +772,8 @@ parent_folder/processed_passes/processed_passes.shp"""
             
     def process_passes(self):
         """Process mountain passes using process_passes.py logic"""
-        root_folder = self.process_passes_root_path.get()
-        mountain_passes_path = self.ref_mountain_passes_path.get()
+        root_folder = resource_path(self.process_passes_root_path.get())
+        mountain_passes_path = resource_path(self.ref_mountain_passes_path.get())
         
         if not all([root_folder, mountain_passes_path]):
             messagebox.showerror("Error", "Please select all required paths.")
@@ -778,12 +785,12 @@ parent_folder/processed_passes/processed_passes.shp"""
             input_crs = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
             
             # Create output directory in the parent folder
-            output_dir = os.path.join(root_folder, "processed_passes")
+            output_dir = resource_path(os.path.join(root_folder, "processed_passes"))
             os.makedirs(output_dir, exist_ok=True)
             
             # Set paths for intermediate and output files
-            intermediate_path = os.path.join(output_dir, "intermediate_passes.shp")
-            output_path = os.path.join(output_dir, "processed_passes.shp")
+            intermediate_path = resource_path(os.path.join(output_dir, "intermediate_passes.shp"))
+            output_path = resource_path(os.path.join(output_dir, "processed_passes.shp"))
             
             process_passes(root_folder, input_crs, intermediate_path, mountain_passes_path, output_path)
             messagebox.showinfo("Success", "Passes processed successfully!")
