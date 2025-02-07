@@ -1,16 +1,18 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import os
-import threading
-import sys
-import yaml
-import pandas as pd
+from PIL import Image, ImageTk
 from src.config import Config
-import launch
-import subprocess
-import multiprocessing
+from tkinter import ttk, filedialog, messagebox
 from utils.cupConvert import convert_coord
-import webbrowser  # Add this import if not already present
+import launch
+import multiprocessing
+import os
+import pandas as pd
+import subprocess
+import sys
+import threading
+import tkinter as tk
+import webbrowser  
+import yaml
+import queue  # Added for the Empty exception
 
 
 def resource_path(relative_path):
@@ -27,6 +29,7 @@ class MountainCirclesGUI:
         self.root = root
         self.root.title("Mountain Circles")
         self.root.resizable(True, True)
+        self.root.geometry("1200x900")
         
         # Create notebook for tabs
         self.notebook = ttk.Notebook(root)
@@ -80,6 +83,7 @@ class MountainCirclesGUI:
         self.airfield_path = tk.StringVar(value="")
         self.topo_path = tk.StringVar(value="")
         self.result_path = tk.StringVar(value="")
+        self.real_result_path = tk.StringVar(value="")
         self.glide_ratio = tk.StringVar(value="")
         self.ground_clearance = tk.StringVar(value="")
         self.circuit_height = tk.StringVar(value="")
@@ -537,7 +541,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             config = self.create_config_dict()
             
             # Create temporary config file
-            temp_config_path = resource_path(os.path.join(self.result_path.get(), "temp_config.yaml"))
+            temp_config_path = resource_path(os.path.join(".", "temp_config.yaml"))
             
             with open(temp_config_path, 'w') as f:
                 # Write the config in the same format as save_config
@@ -586,18 +590,61 @@ parent_folder/processed_passes/processed_passes.geojson"""
             messagebox.showerror("Error", str(e))
     
     def process_data(self, config_path):
-        """Run the main processing function"""
+        """Run the main processing function with stdout/stderr redirected,
+        and poll the output queue for messages from worker processes."""
+        import queue  # Needed to catch the Empty exception
+
+        # Save original stdout and stderr for later restoration
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
+        # Redirect stdout and stderr to the status text widget
+        sys.stdout = MountainCirclesGUI.TextRedirector(self.status_text)
+        sys.stderr = MountainCirclesGUI.TextRedirector(self.status_text)
+
+        # Create a manager and use a managed queue for safe sharing between processes
+        manager = multiprocessing.Manager()
+        output_queue = manager.Queue()
+
+        def poll_queue():
+            try:
+                while True:
+                    msg = output_queue.get_nowait()
+                    self.status_text.insert(tk.END, msg)
+                    self.status_text.see(tk.END)
+            except queue.Empty:
+                pass
+            except BrokenPipeError:
+                # The pipe has been closed (likely because the manager shut down),
+                # so stop polling.
+                return
+            except Exception as e:
+                print("Error polling output queue:", str(e))
+                return
+            # Schedule the next poll in 100ms
+            self.root.after(100, poll_queue)
+
+        # Start polling the queue
+        self.root.after(100, poll_queue)
+
         try:
             multiprocessing.freeze_support()
-            launch.main(resource_path(config_path))
+            # Pass the shared output_queue to your launch function
+            launch.main(resource_path(config_path), output_queue)
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message
-            self.root.after(0, lambda: self.processing_error(error_message))  # Pass it to the lambda
+            self.root.after(0, lambda: self.processing_error(error_message))
         finally:
-            # Clean up temporary config file
+            # Restore the original stdout and stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
+            # Clean up the temporary config file if it exists
             if os.path.exists(config_path):
                 os.remove(config_path)
+            # Shut down the manager; subsequent queue access will raise errors,
+            # but our poll_queue function catches those.
+            manager.shutdown()
     
     def processing_complete(self):
         """Called when processing is complete"""
@@ -615,7 +662,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
     
     def open_results_folder(self):
         """Open the results folder in the system's file explorer"""
-        result_path = resource_path(self.result_path.get())
+        result_path = self.result_path.get()
         if not result_path:
             messagebox.showwarning("Warning", "Please select a result folder first.")
             return
@@ -656,21 +703,12 @@ parent_folder/processed_passes/processed_passes.geojson"""
     
     def browse_directory(self, dir_type, var):
         """Browse for a directory and update the corresponding variable"""
-        # Set default initial directory based on directory type
-        if dir_type == "Results Folder" or dir_type == "Parent Folder":
-            initialdir = resource_path(os.path.join(".", "results"))
-        else:
-            initialdir = "."
         
-        # Create directory if it doesn't exist
-        os.makedirs(initialdir, exist_ok=True)
-        
-        path = filedialog.askdirectory(
-            title=f"Select {dir_type}",
-            initialdir=initialdir
-        )
+        path = filedialog.askdirectory(title=f"Select {dir_type}",)
         if path:
             var.set(path)
+            if dir_type=="Results Folder":
+                self.real_result_path.set(os.path.join(path, self.name.get()))
             
     def process_passes(self):
         """Process mountain passes using process_passes.py logic"""
@@ -714,22 +752,16 @@ parent_folder/processed_passes/processed_passes.geojson"""
         """Opens the system's default browser to the download page."""
         webbrowser.open("https://drive.google.com/drive/folders/1MeU_GSd5152h_8e1rB8i-fspA9_dqah-?usp=sharing")  # Replace with the actual URL you want to open.
     
-    # def _on_run_canvas_configure(self, event):
-    #     """Center the scrollable frame horizontally and adjust its width to the available canvas width."""
-    #     available_width = event.width
-    #     # Adjust the width of the scrollable frame to fully occupy the canvas
-    #     self.canvas.itemconfigure(self.canvas_window, width=available_width)
-    #     # Center the scrollable frame horizontally in the canvas
-    #     self.canvas.coords(self.canvas_window, available_width / 2, 0)
 
     class TextRedirector:
-        """Redirect stdout to the text widget"""
+        """Redirect stdout and stderr to the text widget with thread safety."""
         def __init__(self, widget):
             self.widget = widget
         
-        def write(self, str):
-            self.widget.insert(tk.END, str)
-            self.widget.see(tk.END)
+        def write(self, s):
+            # Schedule the GUI update in the main thread
+            self.widget.after(0, self.widget.insert, tk.END, s)
+            self.widget.after(0, self.widget.see, tk.END)
         
         def flush(self):
             pass
@@ -740,6 +772,4 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    print('gui.py\n')
-    print(sys.path)
     main()

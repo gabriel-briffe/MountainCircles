@@ -1,11 +1,11 @@
 name: alps 
 
 input_files:
-  airfield_file: ./data/airfields/alps.csv
-  topography_file: ./data/topography/alps_topography.asc
-  result_folder: ./results/alps
-  compute: ./compute.exe
-  mapcssTemplate: ./templates/mapcss.mapcss
+  airfield_file: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/airfield files/alps.csv
+  topography_file: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/topography and CRS/alps_topography.asc
+  result_folder: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/---RESULTS---/alps
+  compute: /Users/gabrielbriffe/code/opentopo/code/MountainCircles/./compute.exe
+  mapcssTemplate: /Users/gabrielbriffe/code/opentopo/code/MountainCircles/./templates/mapcss.mapcss
 
 CRS:
   name: 100001
@@ -17,7 +17,7 @@ glide_parameters:
   circuit_height: 250
 
 calculation_parameters:
-  max_altitude: 4200
+  max_altitude: 2000
 
 rendering:
   contour_height: 100

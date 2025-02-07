@@ -6,9 +6,11 @@ import skimage.measure
 from shapely.geometry import LineString, shape, mapping
 import pyproj
 from geojson import Feature, FeatureCollection, LineString as GeoJSONLineString
+from src.logging import log_output
 
 
-def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName):
+
+def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName,output_queue=None):
     """
     Generates contour lines from an ASCII Grid (.asc) file using NumPy and scikit-image.
     Contours are generated from 0 to max elevation with the given interval.
@@ -74,15 +76,15 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
         with open(geojson_path, 'w') as f:
             json.dump(feature_collection, f)
 
-        print(f"Contours created successfully in {inThisFolder}")
+        log_output(f"Contours created successfully for {contourFileName}", output_queue)
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        log_output(f"An error occurred: {e}", output_queue)
 
 
 
 
-def create4326geosonContours(inThisFolder, config, contourFileName):
+def create4326geosonContours(inThisFolder, config, contourFileName,output_queue=None):
     """
     Convert contours from custom CRS to GeoJSON in EPSG:4326 without GeoPandas.
     """
@@ -122,14 +124,14 @@ def create4326geosonContours(inThisFolder, config, contourFileName):
         with open(output_geojson_path, 'w') as f:
             json.dump(fc, f)
 
-        print(f"Contours converted to GeoJSON in EPSG:4326: {output_geojson_path}")
+        log_output(f"{contourFileName} : Contours converted to GeoJSON in EPSG:4326", output_queue)
 
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        log_output(f"An unexpected error occurred: {e}", output_queue)
 
 
 
-def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName):
+def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName,output_queue=None):
     """
     Merge the GeoJSON files for contours and airfields using JSON parsing.
     
@@ -165,31 +167,31 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName):
         with open(merged_geojson_path, 'w') as f:
             json.dump(merged_geojson, f, separators=(',', ':'))
 
-        print(f"GeoJSON files merged successfully. Output file: {merged_geojson_path}")
+        log_output(f"{contourFileName} : Airfields added to contours.", output_queue)
 
     except FileNotFoundError as e:
-        print(f"File not found: {e}")
+        log_output(f"File not found: {e}", output_queue)
     except json.JSONDecodeError as e:
-        print(f"JSON decoding error: {e}")
+        log_output(f"JSON decoding error: {e}", output_queue)
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        log_output(f"An unexpected error occurred: {e}", output_queue)
 
 
-def copyMapCss(toThatFolder, config, contourFileName,extension):
+def copyMapCss(toThatFolder, config, contourFileName,extension,output_queue=None):
     try:
         #copy mapcss for gurumaps export
         mapcss_file = os.path.join(toThatFolder,f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss')
         shutil.copy2(config.mapcssTemplate, mapcss_file)
-        print(f"mapcss copied successfully to {mapcss_file}")
+        log_output(f"{contourFileName}: Guru Map style copied successfully", output_queue)
 
     except Exception as e:
-        print(f"Failed to copy mapcss file: {e}")
+        log_output(f"Failed to copy mapcss file: {e}", output_queue)
 
 
-def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName):
-    generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName)
+def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName,output_queue=None):
+    generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName,output_queue)
     if (config.gurumaps):
-        create4326geosonContours(inThisFolder, config, contourFileName)
+        create4326geosonContours(inThisFolder, config, contourFileName,output_queue)
         # copyMapCss(inThisFolder, config, contourFileName,"_noAirfields")
-        merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName)
-        copyMapCss(toThatFolder, config, contourFileName,"")
+        merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName,output_queue)
+        copyMapCss(toThatFolder, config, contourFileName,"", output_queue)

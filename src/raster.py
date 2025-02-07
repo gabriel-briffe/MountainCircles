@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from src.postprocess import postProcess
+from src.logging import log_output
 
 
 def read_asc(file_path):
@@ -68,7 +69,7 @@ def align_rasters(rasters, cellsize):
     return aligned, min_x, min_y, nrows, ncols
 
 
-def merge_output_rasters(config, output_filename, sectors_filename):
+def merge_output_rasters(config, output_filename, sectors_filename, output_queue=None):
 
     nodata_value = float(config.max_altitude)
     # nodata_value = config.max_altitude
@@ -90,7 +91,7 @@ def merge_output_rasters(config, output_filename, sectors_filename):
                     all_headers.append((path, ncols, nrows, xllcorner, yllcorner, cellsize))
 
     if not all_headers:
-        print("No output_sub.asc files found to merge.")
+        log_output("No output_sub.asc files found to merge.", output_queue)
         return
 
     # Determine the extent of the entire area
@@ -146,9 +147,9 @@ def merge_output_rasters(config, output_filename, sectors_filename):
     output_path = os.path.join(config.calculation_folder, output_filename)
     sectors_path = os.path.join(config.calculation_folder, sectors_filename)
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
-    print(f"Merged raster written to {output_path}")
+    log_output(f"Merged raster written to {output_path}",output_queue)
     write_asc(sectors, sectors_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
-    print(f"Sector raster written to {sectors_path}")
+    log_output(f"Sector raster written to {sectors_path}",output_queue)
 
     postProcess(config.calculation_folder, config.calculation_folder, config, output_path, config.merged_output_name)
 
