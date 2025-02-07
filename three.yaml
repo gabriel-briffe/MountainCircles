@@ -22,9 +22,9 @@ calculation_parameters:
 rendering:
   contour_height: 100
 
-gurumaps: true
-exportPasses: false
+gurumaps: false
+exportPasses: true
 reset_results: true
-clean_temporary_files: true
+clean_temporary_files: false
 
 merged_output_name: merged_output

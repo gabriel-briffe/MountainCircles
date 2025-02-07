@@ -3,10 +3,11 @@ import shutil
 import json
 import numpy as np
 import skimage.measure
-from shapely.geometry import LineString
-import geopandas as gpd
+from shapely.geometry import LineString, shape, mapping
 from rasterio.transform import from_origin
 import pyproj
+from geojson import Feature, FeatureCollection, LineString as GeoJSONLineString
+
 
 def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName):
     """
@@ -60,16 +61,19 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
             contour_geometries.append(line)
             contour_elevations.append(level)
 
-        # Create a GeoDataFrame from the contour geometries and elevations
-        gdf = gpd.GeoDataFrame(
-            {'ELEV': contour_elevations},
-            geometry=contour_geometries,
-            crs=config.CRS
-        )
+        features = []
+        for geometry, elevation in zip(contour_geometries, contour_elevations):
+            feature = Feature(geometry=GeoJSONLineString(geometry.coords), properties={"ELEV": str(int(elevation))})
+            features.append(feature)
 
-        gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-        # Write the GeoDataFrame to a GeoPackage file
-        gdf.to_file(gpkg_path, driver='GPKG', layer='contour')
+        # Create FeatureCollection
+        feature_collection = FeatureCollection(features)
+
+        geojson_path = os.path.join(inThisFolder, f'{contourFileName}_customCRS.geojson')
+
+        # Write to GeoJSON file
+        with open(geojson_path, 'w') as f:
+            json.dump(feature_collection, f)
 
         print(f"Contours created successfully in {inThisFolder}")
 
@@ -78,32 +82,48 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
 
 
 
-def create4326geosonContours_no_gdal(inThisFolder, config, contourFileName):
+
+def create4326geosonContours(inThisFolder, config, contourFileName):
     """
-    Convert contours to GeoJSON in EPSG:4326 without GDAL (ogr/osr).
+    Convert contours from custom CRS to GeoJSON in EPSG:4326 without GeoPandas.
     """
     try:
-        gpkg_path = os.path.join(inThisFolder, f'{contourFileName}.gpkg')
-        geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
+        # Input GeoJSON path (from your custom CRS GeoJSON)
+        input_geojson_path = os.path.join(inThisFolder, f'{contourFileName}_customCRS.geojson')
+        output_geojson_path = os.path.join(inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson')
 
-        # Read GeoPackage using GeoPandas
-        # Try without specifying layer name first
-        gdf = gpd.read_file(gpkg_path)
+        # Read the input GeoJSON
+        with open(input_geojson_path, 'r') as f:
+            data = json.load(f)
+
         # Define coordinate transformations
-        # source_crs = pyproj.CRS(config.CRS)
+        source_crs = pyproj.CRS(config.CRS)  # Assuming config.CRS is the source CRS string
         target_crs = pyproj.CRS("EPSG:4326")
-        # transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
+        transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
 
-        # Reproject the GeoDataFrame using GeoPandas' built-in method
-        gdf = gdf.to_crs(target_crs)
+        # Transform each feature's geometry to EPSG:4326
+        features = []
+        for feature in data['features']:
+            geom = shape(feature['geometry'])
+            if isinstance(geom, LineString):
+                coords = geom.coords
+                transformed_coords = [transformer.transform(x, y) for x, y in coords]
+                transformed_geom = GeoJSONLineString(transformed_coords)
+            else:
+                raise ValueError(f"Unexpected geometry type: {type(geom)}")
 
-        # Convert ELEV to string
-        gdf['ELEV'] = gdf['ELEV'].astype(int).astype(str)
+            # Create new feature with transformed geometry but keep original properties
+            transformed_feature = Feature(geometry=transformed_geom, properties=feature['properties'])
+            features.append(transformed_feature)
 
-        # Write to GeoJSON using GeoPandas
-        gdf.to_file(geojson_path, driver='GeoJSON')
+        # Create FeatureCollection
+        fc = FeatureCollection(features)
 
-        print(f"Contours converted to GeoJSON in EPSG:4326: {geojson_path}")
+        # Write transformed GeoJSON
+        with open(output_geojson_path, 'w') as f:
+            json.dump(fc, f)
+
+        print(f"Contours converted to GeoJSON in EPSG:4326: {output_geojson_path}")
 
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
@@ -170,7 +190,7 @@ def copyMapCss(toThatFolder, config, contourFileName,extension):
 def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName):
     generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileName)
     if (config.gurumaps):
-        create4326geosonContours_no_gdal(inThisFolder, config, contourFileName)
+        create4326geosonContours(inThisFolder, config, contourFileName)
         # copyMapCss(inThisFolder, config, contourFileName,"_noAirfields")
         merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName)
         copyMapCss(toThatFolder, config, contourFileName,"")

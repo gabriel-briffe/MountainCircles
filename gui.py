@@ -109,18 +109,18 @@ class MountainCirclesGUI:
         self.param_frame = ttk.LabelFrame(self.main_frame, text="Parameters", padding="5")
         self.param_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
-        # Input Files Section
-        ttk.Label(self.param_frame, text="Input Files", font=('Arial', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
+        # # Input Files Section
+        # ttk.Label(self.param_frame, text="Input Files", font=('Arial', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
         
         # Name field and Save button
-        ttk.Label(self.param_frame, text="Name:").grid(row=1, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.name, width=50).grid(row=1, column=1, padx=5)
+        ttk.Label(self.param_frame, text="Config name:").grid(row=1, column=0, sticky=tk.W)
+        ttk.Entry(self.param_frame, textvariable=self.name, width=75).grid(row=1, column=1, padx=5)
         ttk.Button(self.param_frame, text="Save Config", command=self.save_config).grid(row=1, column=2)
         
         # Airfield file selection with Open With button
         ttk.Label(self.param_frame, text="Airfield File:").grid(row=2, column=0, sticky=tk.W)
         self.airfield_path = tk.StringVar()
-        ttk.Entry(self.param_frame, textvariable=self.airfield_path, width=50).grid(row=2, column=1, padx=5)
+        ttk.Entry(self.param_frame, textvariable=self.airfield_path, width=75).grid(row=2, column=1, padx=5)
         
         # Create a frame for the buttons
         airfield_buttons_frame = ttk.Frame(self.param_frame)
@@ -133,13 +133,13 @@ class MountainCirclesGUI:
         
         # Topography file selection
         ttk.Label(self.param_frame, text="Topography File:").grid(row=3, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.topo_path, width=50).grid(row=3, column=1, padx=5)
+        ttk.Entry(self.param_frame, textvariable=self.topo_path, width=75).grid(row=3, column=1, padx=5)
         ttk.Button(self.param_frame, text="Browse", 
                   command=lambda: self.browse_file("Topography File", self.topo_path)).grid(row=3, column=2)
         
         # Result folder selection
         ttk.Label(self.param_frame, text="Result Folder:").grid(row=4, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.result_path, width=50).grid(row=4, column=1, padx=5)
+        ttk.Entry(self.param_frame, textvariable=self.result_path, width=75).grid(row=4, column=1, padx=5)
         ttk.Button(self.param_frame, text="Browse", 
                   command=lambda: self.browse_directory("Results Folder", self.result_path)).grid(row=4, column=2)
         
@@ -174,37 +174,28 @@ class MountainCirclesGUI:
         
         ttk.Checkbutton(self.param_frame, text="Clean temporary files", variable=self.clean_temporary_files).grid(row=14, column=0, sticky=tk.W)
         
-        
-        # Status display
-        ttk.Label(self.main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(row=15, column=0, sticky=tk.W, pady=5)
-        self.status_text = tk.Text(self.main_frame, height=20, width=100)
-        self.status_text.grid(row=16, column=0, columnspan=3, pady=5)
-        
-        # Scrollbar for status text
-        scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
-        scrollbar.grid(row=16, column=3, sticky=(tk.N, tk.S))
-        self.status_text['yscrollcommand'] = scrollbar.set
-        
         # Control buttons
         self.button_frame = ttk.Frame(self.main_frame)
-        self.button_frame.grid(row=17, column=0, columnspan=3, pady=10)
+        self.button_frame.grid(row=16, column=0, columnspan=3, pady=10)
         
+        ttk.Button(self.button_frame, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=5)
+
         self.run_button = ttk.Button(self.button_frame, text="Run Processing", command=self.run_processing)
         self.run_button.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(self.button_frame, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=5)
+        self.open_results_button = ttk.Button(self.button_frame, text="Open Results Folder", command=self.open_results_folder)
+        self.open_results_button.pack(side=tk.LEFT, padx=5)
         
-        # Add a separator before the open results button
-        ttk.Separator(self.main_frame, orient='horizontal').grid(row=98, column=0, columnspan=3, sticky='ew', pady=10)
+        # Status display
+        ttk.Label(self.main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(row=15, column=0, sticky=tk.W, pady=5)
+        self.status_text = tk.Text(self.main_frame, height=20, width=150)
+        self.status_text.grid(row=17, column=0, columnspan=3, pady=5)
         
-        # Add Open Results Folder button at the bottom
-        self.open_results_button = ttk.Button(
-            self.main_frame, 
-            text="Open Results Folder", 
-            command=self.open_results_folder
-        )
-        self.open_results_button.grid(row=99, column=0, columnspan=3, pady=5)
-        
+        # Scrollbar for status text
+        scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
+        scrollbar.grid(row=17, column=3, sticky=(tk.N, tk.S))
+        self.status_text['yscrollcommand'] = scrollbar.set
+                
         # Redirect stdout to our status text widget
         sys.stdout = self.TextRedirector(self.status_text)
     

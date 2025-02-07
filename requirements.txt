@@ -1,0 +1,9 @@
+pyinstaller
+pyyaml
+pyproj
+numpy
+shapely
+rasterio
+scikit-image
+pandas
+geojson
