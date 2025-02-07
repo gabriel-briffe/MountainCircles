@@ -69,36 +69,11 @@ class MountainCirclesGUI:
 
 
     def setup_run_tab(self):
-        """Setup the Run tab with existing functionality"""
-        # Create main canvas with scrollbar for Run tab
-        self.canvas = tk.Canvas(self.run_tab, highlightthickness=0)
-        self.scrollbar = ttk.Scrollbar(self.run_tab, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
-        
-        # Configure canvas
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.adjust_window_and_canvas(e)
-        )
-        
-        # Configure root to adjust canvas on resize
-        self.root.bind("<Configure>", lambda e: self.canvas.configure(width=e.width-20))
-        
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        
-        # Bind scrolling to the canvas and its children
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.canvas.bind_all("<Button-5>", self._on_mousewheel)
-        
-        # Pack scrollbar and canvas
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.pack(side="left", fill="both", expand=True)
-        
-        # Create main frame with padding
-        self.main_frame = ttk.Frame(self.scrollable_frame, padding="10")
-        self.main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        """Setup the Run tab with a simple layout using only frames."""
+        # Create a main frame that fills the Run tab
+        main_frame = ttk.Frame(self.run_tab, padding="5")
+        main_frame.pack(expand=True, fill="both")
+        main_frame.pack_propagate(False)
         
         # Initialize variables with empty values
         self.name = tk.StringVar(value="")
@@ -114,189 +89,173 @@ class MountainCirclesGUI:
         self.reset_results = tk.BooleanVar(value=False)
         self.clean_temporary_files = tk.BooleanVar(value=False)
         
-        # Create config file frame
-        self.config_frame = ttk.LabelFrame(self.main_frame, padding="5")
-        self.config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        #------------------------------------------------------------
+
+        # Create configuration frame at the top
+        config_frame = ttk.LabelFrame(main_frame, padding="5")
+        # config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
-        # Get list of YAML files
+        # Get list of YAML files and set up the config dropdown
         self.yaml_files = [f for f in os.listdir('.') if f.endswith('.yaml')]
         
         # Add Config dropdown and refresh button
-        ttk.Label(self.config_frame, text="Select Config:").grid(row=0, column=0, padx=5)
-        self.config_dropdown = ttk.Combobox(self.config_frame, values=self.yaml_files, width=30)
-        self.config_dropdown.grid(row=0, column=1, padx=5)
+        ttk.Label(config_frame, text="Select Config:").grid(row=0, column=0, padx=5, sticky="ew")
+        self.config_dropdown = ttk.Combobox(config_frame, values=self.yaml_files, width=30)
+        self.config_dropdown.grid(row=0, column=1, padx=5, sticky="ew")
         self.config_dropdown.bind('<<ComboboxSelected>>', self.load_selected_config)
         
-        ttk.Button(self.config_frame, text="Refresh List", command=self.refresh_yaml_list).grid(row=0, column=2, padx=5)
+        # Set default selection to the first available value if any exist
+        if self.yaml_files:
+            self.config_dropdown.current(0)
+            self.load_selected_config(self)
         
+        ttk.Button(config_frame, text="Refresh List", command=self.refresh_yaml_list).grid(row=0, column=2, padx=5, sticky="ew")
+        
+        # Configure grid columns to spread evenly
+        config_frame.grid_columnconfigure(0, weight=0)
+        config_frame.grid_columnconfigure(1, weight=2)
+        config_frame.grid_columnconfigure(2, weight=0)
+        
+        #-------------------------------------------------------------
+
         # Create parameter input frame
-        self.param_frame = ttk.LabelFrame(self.main_frame, text="Config Parameters :", padding="5")
-        self.param_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
+        param_frame = ttk.LabelFrame(main_frame, text="Config Parameters :", padding="5")
+        param_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
-        # # Input Files Section
-        # ttk.Label(self.param_frame, text="Input Files", font=('Arial', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
+        # Config name and Save button
+        ttk.Label(param_frame, text="Config name:").grid(row=1, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.name).grid(row=1, column=1, padx=5, sticky="ew")
+        ttk.Button(param_frame, text="Save Config", command=self.save_config).grid(row=1, column=2)
         
-        # Name field and Save button
-        ttk.Label(self.param_frame, text="Config name:").grid(row=1, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.name, width=75).grid(row=1, column=1, padx=5)
-        ttk.Button(self.param_frame, text="Save Config", command=self.save_config).grid(row=1, column=2)
-        
-        # Airfield file selection with Open With button
-        ttk.Label(self.param_frame, text="Airfield File:").grid(row=2, column=0, sticky=tk.W)
-        self.airfield_path = tk.StringVar()
-        ttk.Entry(self.param_frame, textvariable=self.airfield_path, width=75).grid(row=2, column=1, padx=5)
-        
-        # Create a frame for the buttons
-        airfield_buttons_frame = ttk.Frame(self.param_frame)
-        airfield_buttons_frame.grid(row=2, column=2, sticky=tk.W)
-        
-        ttk.Button(airfield_buttons_frame, text="Browse", 
-                  command=lambda: self.browse_file("Airfield File", self.airfield_path)).grid(row=0, column=0, padx=2)
-        ttk.Button(airfield_buttons_frame, text="Open/edit", 
-                  command=self.open_airfield_file).grid(row=0, column=1, padx=2)
+        # Airfield file selection
+        ttk.Label(param_frame, text="Airfield File:").grid(row=2, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.airfield_path).grid(row=2, column=1, padx=5, sticky="ew")
+        airfield_buttons_frame = ttk.Frame(param_frame)
+        airfield_buttons_frame.grid(row=2, column=2, sticky="w")
+        ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.browse_file("Airfield File", self.airfield_path)).grid(row=0, column=0, padx=2)
+        ttk.Button(airfield_buttons_frame, text="Open/edit", command=self.open_airfield_file).grid(row=0, column=1, padx=2)
         
         # Topography file selection
-        ttk.Label(self.param_frame, text="Topography File:").grid(row=3, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.topo_path, width=75).grid(row=3, column=1, padx=5)
-        ttk.Button(self.param_frame, text="Browse", 
-                  command=lambda: self.browse_file("Topography File", self.topo_path)).grid(row=3, column=2)
+        ttk.Label(param_frame, text="Topography File:").grid(row=3, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.topo_path).grid(row=3, column=1, padx=5, sticky="ew")
+        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file("Topography File", self.topo_path)).grid(row=3, column=2)
         
         # Result folder selection
-        ttk.Label(self.param_frame, text="Result Folder:").grid(row=4, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.result_path, width=75).grid(row=4, column=1, padx=5)
-        ttk.Button(self.param_frame, text="Browse", 
-                  command=lambda: self.browse_directory("Results Folder", self.result_path)).grid(row=4, column=2)
+        ttk.Label(param_frame, text="Result Folder:").grid(row=4, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.result_path).grid(row=4, column=1, padx=5, sticky="ew")
+        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_directory("Results Folder", self.result_path)).grid(row=4, column=2)
         
         # Glide Parameters Section
-        ttk.Label(self.param_frame, text="Glide Parameters", font=('Arial', 10, 'bold')).grid(row=5, column=0, sticky=tk.W, pady=(15,5))
+        ttk.Label(param_frame, text="Glide Parameters", font=('Arial', 10, 'bold')).grid(row=5, column=0, sticky="w", pady=(15,5))
         
         # Glide ratio
-        ttk.Label(self.param_frame, text="Glide Ratio:").grid(row=6, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.glide_ratio, width=10).grid(row=6, column=1, sticky=tk.W, padx=5)
+        ttk.Label(param_frame, text="Glide Ratio:").grid(row=6, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.glide_ratio, width=10).grid(row=6, column=1, sticky="w", padx=5)
         
         # Ground clearance
-        ttk.Label(self.param_frame, text="Ground Clearance (m):").grid(row=7, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.ground_clearance, width=10).grid(row=7, column=1, sticky=tk.W, padx=5)
+        ttk.Label(param_frame, text="Ground Clearance (m):").grid(row=7, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.ground_clearance, width=10).grid(row=7, column=1, sticky="w", padx=5)
         
         # Circuit height
-        ttk.Label(self.param_frame, text="Circuit Height (m):").grid(row=8, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.circuit_height, width=10).grid(row=8, column=1, sticky=tk.W, padx=5)
+        ttk.Label(param_frame, text="Circuit Height (m):").grid(row=8, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.circuit_height, width=10).grid(row=8, column=1, sticky="w", padx=5)
         
         # Max altitude
-        ttk.Label(self.param_frame, text="Max Altitude (m):").grid(row=9, column=0, sticky=tk.W)
-        ttk.Entry(self.param_frame, textvariable=self.max_altitude, width=10).grid(row=9, column=1, sticky=tk.W, padx=5)
+        ttk.Label(param_frame, text="Max Altitude (m):").grid(row=9, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.max_altitude, width=10).grid(row=9, column=1, sticky="w", padx=5)
         
         # Additional Options Section
-        ttk.Label(self.param_frame, text="Additional Options", font=('Arial', 10, 'bold')).grid(row=10, column=0, sticky=tk.W, pady=(15,5))
+        ttk.Label(param_frame, text="Additional Options", font=('Arial', 10, 'bold')).grid(row=10, column=0, sticky="w", pady=(15,5))
         
         # Checkboxes
-        ttk.Checkbutton(self.param_frame, text="Wipe result folder", variable=self.reset_results).grid(row=11, column=0, sticky=tk.W)
+        ttk.Checkbutton(param_frame, text="Wipe result folder", variable=self.reset_results).grid(row=11, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Generate data files for Guru Maps", variable=self.gurumaps).grid(row=12, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Create mountain passes files", variable=self.export_passes).grid(row=13, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Clean temporary files", variable=self.clean_temporary_files).grid(row=14, column=0, sticky="w")
         
-        ttk.Checkbutton(self.param_frame, text="Generate data files for Guru Maps", variable=self.gurumaps).grid(row=12, column=0, sticky=tk.W)
+        param_frame.grid_columnconfigure(1, weight="1")
         
-        ttk.Checkbutton(self.param_frame, text="Create mountain passes files", variable=self.export_passes).grid(row=13, column=0, sticky=tk.W)
-        
-        ttk.Checkbutton(self.param_frame, text="Clean temporary files", variable=self.clean_temporary_files).grid(row=14, column=0, sticky=tk.W)
-        
-        # Control buttons
-        self.button_frame = ttk.Frame(self.main_frame)
-        self.button_frame.grid(row=16, column=0, columnspan=3, pady=10)
-        
-        ttk.Button(self.button_frame, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=5)
+        # Control buttons frame
+        control_btn_frame = ttk.Frame(main_frame)
+        control_btn_frame.grid(row=15, column=0, columnspan=3, pady=10)
+        ttk.Button(control_btn_frame, text="Clear Log", command=self.clear_log).pack(side=tk.LEFT, padx=5)
 
-        self.run_button = ttk.Button(self.button_frame, text="Run Processing", command=self.run_processing)
+        self.run_button = ttk.Button(control_btn_frame, text="Run Processing", command=self.run_processing)
         self.run_button.pack(side=tk.LEFT, padx=5)
         
-        self.open_results_button = ttk.Button(self.button_frame, text="Open Results Folder", command=self.open_results_folder)
+        self.open_results_button = ttk.Button(control_btn_frame, text="Open Results Folder", command=self.open_results_folder)
         self.open_results_button.pack(side=tk.LEFT, padx=5)
         
-        # Status display
-        ttk.Label(self.main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(row=15, column=0, sticky=tk.W, pady=5)
-        self.status_text = tk.Text(self.main_frame, height=20, width=150)
-        self.status_text.grid(row=17, column=0, columnspan=3, pady=5)
-        
-        # Scrollbar for status text
-        scrollbar = ttk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
-        scrollbar.grid(row=17, column=3, sticky=(tk.N, tk.S))
-        self.status_text['yscrollcommand'] = scrollbar.set
-                
+        # Status display area
+        ttk.Label(main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(row=16, column=0, sticky="w", pady=5)
+        self.status_text = tk.Text(main_frame)
+        self.status_text.grid(row=17, column=0, columnspan=3, pady=5, sticky="nsew")
+        scroller = ttk.Scrollbar(main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
+        scroller.grid(row=17, column=3, sticky="ns")
+        self.status_text['yscrollcommand'] = scroller.set
 
-        
+        main_frame.grid_columnconfigure(0, weight=1)
+        main_frame.grid_rowconfigure(17, weight=1)
+
+
+
+
+
+
     def setup_utilities_tab(self):
         """Setup the Utilities tab without scroll functionality"""
-        # Create a main frame for the utilities tab that fills the tab entirely
-        main_frame = ttk.Frame(self.utilities_tab)
+        # Create a main frame for the utilities tab 
+        main_frame = ttk.Frame(self.utilities_tab, padding="5")
         main_frame.pack(expand=True, fill="both")
-        
-        # Create a content frame and center it within the main frame
-        content_frame = ttk.Frame(main_frame, padding="10")
-        content_frame.place(relx=0.5, rely=0.5, anchor='center')
-        
+        main_frame.pack_propagate(False)  
+
+        #------------------------------------------------------------------
         # CUP Converter Section
-        cup_frame = ttk.LabelFrame(content_frame, text="CUP File Converter", padding="5")
-        cup_frame.pack(fill="x", pady=5)
-        
+        cup_frame = ttk.LabelFrame(main_frame, text="CUP File Converter", padding="5")
+        cup_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20)  # Use boolean True, not a string
+
         # Input file selection
-        ttk.Label(cup_frame, text="Input CUP file:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(cup_frame, text="Input CUP file:").grid(row=1, column=0, sticky="w")
         self.cup_input_path = tk.StringVar()
-        ttk.Entry(cup_frame, textvariable=self.cup_input_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(
-            cup_frame, 
-            text="Browse", 
-            command=lambda: self.browse_file("CUP File", self.cup_input_path, [("CUP files", "*.cup")])
-        ).grid(row=0, column=2)
+        ttk.Entry(cup_frame, textvariable=self.cup_input_path).grid(row=1, column=1, sticky="ew", padx=5)
+        ttk.Button(cup_frame, text="Browse", command=lambda: self.browse_file("CUP File", self.cup_input_path, [("CUP files", "*.cup")])).grid(row=1, column=2)
         
         # Output file selection
-        ttk.Label(cup_frame, text="Output CSV file:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(cup_frame, text="Output CSV file:").grid(row=2, column=0, sticky="w", pady=5)
         self.cup_output_path = tk.StringVar()
-        ttk.Entry(cup_frame, textvariable=self.cup_output_path, width=50).grid(row=1, column=1, padx=5)
-        ttk.Button(
-            cup_frame, 
-            text="Browse", 
-            command=lambda: self.browse_save_file("CSV File", self.cup_output_path, [("CSV files", "*.csv")])
-        ).grid(row=1, column=2)
+        ttk.Entry(cup_frame, textvariable=self.cup_output_path).grid(row=2, column=1, sticky="ew", padx=5)
+        ttk.Button(cup_frame, text="Browse", command=lambda: self.browse_save_file("CSV File", self.cup_output_path, [("CSV files", "*.csv")])).grid(row=2, column=2)
         
         # Convert button
-        ttk.Button(
-            cup_frame, 
-            text="Convert CUP to CSV", 
-            command=self.convert_cup_file
-        ).grid(row=2, column=0, columnspan=3, pady=10)
+        ttk.Button(cup_frame, text="Convert CUP to CSV", command=self.convert_cup_file).grid(row=3, column=1, pady=10)
+
+        cup_frame.grid_columnconfigure(1, weight=1)
         
+        #-------------------------------------------------------------
+
         # Process Passes Section
-        process_passes_frame = ttk.LabelFrame(content_frame, text="Process Mountain Passes", padding="5")
-        process_passes_frame.pack(fill="x", pady=5)
+        process_passes_frame = ttk.LabelFrame(main_frame, text="Process Mountain Passes", padding="5")
+        process_passes_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20) 
         
         # Parent folder selection
-        ttk.Label(process_passes_frame, text="Parent folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Label(process_passes_frame, text="Parent folder:").grid(row=0, column=0, sticky="w", pady=5)
         self.process_passes_root_path = tk.StringVar()
-        ttk.Entry(process_passes_frame, textvariable=self.process_passes_root_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(
-            process_passes_frame, 
-            text="Browse", 
-            command=lambda: self.browse_directory("Parent Folder", self.process_passes_root_path)
-        ).grid(row=0, column=2)
+        ttk.Entry(process_passes_frame, textvariable=self.process_passes_root_path).grid(row=0, column=1, sticky="ew", padx=5)
+        ttk.Button(process_passes_frame, text="Browse", command=lambda: self.browse_directory("Parent Folder", self.process_passes_root_path)).grid(row=0, column=2)
         
         # Mountain passes reference geojson
-        ttk.Label(process_passes_frame, text="Reference Passes:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Label(process_passes_frame, text="Reference Passes:").grid(row=1, column=0, sticky="w", pady=5)
         self.ref_mountain_passes_path = tk.StringVar(
             value=resource_path(os.path.join("data", "passes", "passesosmalps.geojson"))
         )
-        ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path, width=50).grid(row=1, column=1, padx=5)
-        ttk.Button(
-            process_passes_frame, 
-            text="Browse", 
-            command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, [("GeoJSON", "*.geojson")])
-        ).grid(row=1, column=2)
+        ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path).grid(row=1, column=1, sticky="ew", padx=5)
+        ttk.Button(process_passes_frame, text="Browse", command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, [("GeoJSON", "*.geojson")])).grid(row=1, column=2)
         
         # Help section
         self.help_visible = False
-        help_button = ttk.Button(
-            process_passes_frame, 
-            text="Show Help ▼", 
-            command=lambda: self.toggle_help_section(help_button, help_frame)
-        )
-        help_button.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky='ew')
+        help_button = ttk.Button(process_passes_frame, text="Show Help ▼", command=lambda: self.toggle_help_section(help_button, help_frame))
+        help_button.grid(row=2, column=1,  pady=(10, 0), sticky='ew')
         
         # Help content frame (initially hidden)
         help_frame = ttk.Frame(process_passes_frame)
@@ -316,11 +275,15 @@ parent_folder/processed_passes/processed_passes.geojson"""
         help_label.pack(pady=10)
         
         # Process button
-        ttk.Button(
-            process_passes_frame, 
-            text="Process Passes", 
-            command=self.process_passes
-        ).grid(row=4, column=0, columnspan=3, pady=10)
+        ttk.Button(process_passes_frame, text="Process Passes", command=self.process_passes).grid(row=4, column=0, columnspan=3, pady=10)
+
+        process_passes_frame.grid_columnconfigure(1, weight=1)
+
+        main_frame.grid_columnconfigure(0,weight=1)
+
+
+
+
 
     def browse_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a file and update the corresponding variable"""
@@ -650,31 +613,6 @@ parent_folder/processed_passes/processed_passes.geojson"""
         """Clear the status text widget"""
         self.status_text.delete(1.0, tk.END)
     
-    def adjust_window_and_canvas(self, event):
-        """Adjust window size based on content and screen size"""
-        # Get screen dimensions
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        
-        # Get content size
-        content_width = self.scrollable_frame.winfo_reqwidth()
-        content_height = self.scrollable_frame.winfo_reqheight()
-        
-        # Calculate window size (with some padding and maximum limits)
-        window_width = min(content_width + 50, screen_width * 0.8)  # 80% of screen width maximum
-        window_height = min(content_height + 50, screen_height * 0.8)  # 80% of screen height maximum
-        
-        # Set minimum window size
-        self.root.minsize(int(window_width), int(window_height))
-        
-        # Update canvas scrollregion
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        
-        # Only set geometry on initial load
-        if not hasattr(self, '_window_sized'):
-            self.root.geometry(f"{int(window_width)}x{int(window_height)}")
-            self._window_sized = True
-    
     def open_results_folder(self):
         """Open the results folder in the system's file explorer"""
         result_path = resource_path(self.result_path.get())
@@ -715,28 +653,6 @@ parent_folder/processed_passes/processed_passes.geojson"""
                 subprocess.run(['xdg-open', file_path])
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open file: {str(e)}")
-    
-    def _on_mousewheel(self, event):
-        """Handle mousewheel scrolling for the active canvas"""
-        canvas = None
-        
-        # Determine which tab is active and get its canvas
-        current_tab = self.notebook.select()
-        tab_index = self.notebook.index(current_tab)
-        
-        if tab_index == 1:  # Run tab
-            canvas = self.canvas
-            
-        if canvas:
-            if event.num == 4:  # Linux scroll up
-                canvas.yview_scroll(-1, "units")
-            elif event.num == 5:  # Linux scroll down
-                canvas.yview_scroll(1, "units")
-            else:  # Windows/macOS
-                if sys.platform == "darwin":
-                    canvas.yview_scroll(-1 * event.delta, "units")
-                else:
-                    canvas.yview_scroll(-1 * (event.delta // 120), "units")
     
     def browse_directory(self, dir_type, var):
         """Browse for a directory and update the corresponding variable"""
@@ -798,6 +714,14 @@ parent_folder/processed_passes/processed_passes.geojson"""
         """Opens the system's default browser to the download page."""
         webbrowser.open("https://drive.google.com/drive/folders/1MeU_GSd5152h_8e1rB8i-fspA9_dqah-?usp=sharing")  # Replace with the actual URL you want to open.
     
+    # def _on_run_canvas_configure(self, event):
+    #     """Center the scrollable frame horizontally and adjust its width to the available canvas width."""
+    #     available_width = event.width
+    #     # Adjust the width of the scrollable frame to fully occupy the canvas
+    #     self.canvas.itemconfigure(self.canvas_window, width=available_width)
+    #     # Center the scrollable frame horizontally in the canvas
+    #     self.canvas.coords(self.canvas_window, available_width / 2, 0)
+
     class TextRedirector:
         """Redirect stdout to the text widget"""
         def __init__(self, widget):
