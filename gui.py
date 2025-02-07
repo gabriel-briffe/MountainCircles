@@ -8,7 +8,10 @@ import pandas as pd
 from src.config import Config
 import launch
 import subprocess
+import multiprocessing
 from utils.cupConvert import convert_coord
+import webbrowser  # Add this import if not already present
+
 
 def resource_path(relative_path):
     try:
@@ -35,14 +38,35 @@ class MountainCirclesGUI:
         self.utilities_tab = ttk.Frame(self.notebook)
         
         # Add tabs to notebook
-        self.notebook.add(self.run_tab, text='Run')
         self.notebook.add(self.download_tab, text='Download')
+        self.notebook.add(self.run_tab, text='Run')
         self.notebook.add(self.utilities_tab, text='Utilities')
         
         # Setup tabs
-        self.setup_run_tab()
         self.setup_download_tab()
+        self.setup_run_tab()
         self.setup_utilities_tab()
+
+
+
+    def setup_download_tab(self):
+        """Setup the Download tab without scroll functionality"""
+        # Create a main frame for the download tab that fills the tab entirely
+        main_frame = ttk.Frame(self.download_tab)
+        main_frame.pack(expand=True, fill="both")
+        
+        # Create a content frame and center it within the main frame
+        content_frame = ttk.Frame(main_frame)
+        content_frame.place(relx=0.5, rely=0.5, anchor='center')
+        
+        # Add label with the text
+        label = ttk.Label(content_frame, text="Download data files and directory structure to start your project:")
+        label.pack(pady=10)
+        
+        # Add the download button which opens the system browser to a web address
+        button = ttk.Button(content_frame, text="Download Now", command=self.open_download_page)
+        button.pack(pady=10)
+
 
     def setup_run_tab(self):
         """Setup the Run tab with existing functionality"""
@@ -91,7 +115,7 @@ class MountainCirclesGUI:
         self.clean_temporary_files = tk.BooleanVar(value=False)
         
         # Create config file frame
-        self.config_frame = ttk.LabelFrame(self.main_frame, text="Configuration File", padding="5")
+        self.config_frame = ttk.LabelFrame(self.main_frame, padding="5")
         self.config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
         # Get list of YAML files
@@ -106,7 +130,7 @@ class MountainCirclesGUI:
         ttk.Button(self.config_frame, text="Refresh List", command=self.refresh_yaml_list).grid(row=0, column=2, padx=5)
         
         # Create parameter input frame
-        self.param_frame = ttk.LabelFrame(self.main_frame, text="Parameters", padding="5")
+        self.param_frame = ttk.LabelFrame(self.main_frame, text="Config Parameters :", padding="5")
         self.param_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
         
         # # Input Files Section
@@ -196,112 +220,83 @@ class MountainCirclesGUI:
         scrollbar.grid(row=17, column=3, sticky=(tk.N, tk.S))
         self.status_text['yscrollcommand'] = scrollbar.set
                 
-        # Redirect stdout to our status text widget
-        sys.stdout = self.TextRedirector(self.status_text)
-    
-    def setup_download_tab(self):
-        """Setup the Download tab"""
-        # Create main canvas with scrollbar for Download tab
-        self.download_canvas = tk.Canvas(self.download_tab, highlightthickness=0)
-        self.download_scrollbar = ttk.Scrollbar(self.download_tab, orient="vertical", command=self.download_canvas.yview)
-        self.download_scrollable_frame = ttk.Frame(self.download_canvas)
-        
-        # Configure canvas
-        self.download_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.download_canvas.configure(scrollregion=self.download_canvas.bbox("all"))
-        )
-        
-        self.download_canvas.create_window((0, 0), window=self.download_scrollable_frame, anchor="nw")
-        self.download_canvas.configure(yscrollcommand=self.download_scrollbar.set)
-        
-        # Bind scrolling to the canvas and its children
-        self.download_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.download_canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.download_canvas.bind_all("<Button-5>", self._on_mousewheel)
-        
-        # Pack scrollbar and canvas
-        self.download_scrollbar.pack(side="right", fill="y")
-        self.download_canvas.pack(side="left", fill="both", expand=True)
-        
-        # Add content
-        ttk.Label(self.download_scrollable_frame, text="Download functionality coming soon...").pack(pady=20)
+
         
     def setup_utilities_tab(self):
-        """Setup the Utilities tab"""
-        # Create main canvas with scrollbar for Utilities tab
-        self.utilities_canvas = tk.Canvas(self.utilities_tab, highlightthickness=0)
-        self.utilities_scrollbar = ttk.Scrollbar(self.utilities_tab, orient="vertical", command=self.utilities_canvas.yview)
-        self.utilities_scrollable_frame = ttk.Frame(self.utilities_canvas)
+        """Setup the Utilities tab without scroll functionality"""
+        # Create a main frame for the utilities tab that fills the tab entirely
+        main_frame = ttk.Frame(self.utilities_tab)
+        main_frame.pack(expand=True, fill="both")
         
-        # Configure canvas
-        self.utilities_scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.utilities_canvas.configure(scrollregion=self.utilities_canvas.bbox("all"))
-        )
-        
-        self.utilities_canvas.create_window((0, 0), window=self.utilities_scrollable_frame, anchor="nw")
-        self.utilities_canvas.configure(yscrollcommand=self.utilities_scrollbar.set)
-        
-        # Bind scrolling to the canvas and its children
-        self.utilities_canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self.utilities_canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self.utilities_canvas.bind_all("<Button-5>", self._on_mousewheel)
-        
-        # Pack scrollbar and canvas
-        self.utilities_scrollbar.pack(side="right", fill="y")
-        self.utilities_canvas.pack(side="left", fill="both", expand=True)
-        
-        # Create main frame with padding
-        utilities_main_frame = ttk.Frame(self.utilities_scrollable_frame, padding="10")
-        utilities_main_frame.pack(fill="both", expand=True)
+        # Create a content frame and center it within the main frame
+        content_frame = ttk.Frame(main_frame, padding="10")
+        content_frame.place(relx=0.5, rely=0.5, anchor='center')
         
         # CUP Converter Section
-        cup_frame = ttk.LabelFrame(utilities_main_frame, text="CUP File Converter", padding="5")
+        cup_frame = ttk.LabelFrame(content_frame, text="CUP File Converter", padding="5")
         cup_frame.pack(fill="x", pady=5)
         
         # Input file selection
         ttk.Label(cup_frame, text="Input CUP file:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.cup_input_path = tk.StringVar()
         ttk.Entry(cup_frame, textvariable=self.cup_input_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(cup_frame, text="Browse", 
-                  command=lambda: self.browse_file("CUP File", self.cup_input_path, [("CUP files", "*.cup")])).grid(row=0, column=2)
+        ttk.Button(
+            cup_frame, 
+            text="Browse", 
+            command=lambda: self.browse_file("CUP File", self.cup_input_path, [("CUP files", "*.cup")])
+        ).grid(row=0, column=2)
         
         # Output file selection
         ttk.Label(cup_frame, text="Output CSV file:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.cup_output_path = tk.StringVar()
         ttk.Entry(cup_frame, textvariable=self.cup_output_path, width=50).grid(row=1, column=1, padx=5)
-        ttk.Button(cup_frame, text="Browse", 
-                  command=lambda: self.browse_save_file("CSV File", self.cup_output_path, [("CSV files", "*.csv")])).grid(row=1, column=2)
+        ttk.Button(
+            cup_frame, 
+            text="Browse", 
+            command=lambda: self.browse_save_file("CSV File", self.cup_output_path, [("CSV files", "*.csv")])
+        ).grid(row=1, column=2)
         
         # Convert button
-        ttk.Button(cup_frame, text="Convert CUP to CSV", 
-                  command=self.convert_cup_file).grid(row=2, column=0, columnspan=3, pady=10)
+        ttk.Button(
+            cup_frame, 
+            text="Convert CUP to CSV", 
+            command=self.convert_cup_file
+        ).grid(row=2, column=0, columnspan=3, pady=10)
         
         # Process Passes Section
-        process_passes_frame = ttk.LabelFrame(utilities_main_frame, text="Process Mountain Passes", padding="5")
+        process_passes_frame = ttk.LabelFrame(content_frame, text="Process Mountain Passes", padding="5")
         process_passes_frame.pack(fill="x", pady=5)
         
         # Parent folder selection
         ttk.Label(process_passes_frame, text="Parent folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.process_passes_root_path = tk.StringVar()
         ttk.Entry(process_passes_frame, textvariable=self.process_passes_root_path, width=50).grid(row=0, column=1, padx=5)
-        ttk.Button(process_passes_frame, text="Browse", 
-                  command=lambda: self.browse_directory("Parent Folder", self.process_passes_root_path)).grid(row=0, column=2)
+        ttk.Button(
+            process_passes_frame, 
+            text="Browse", 
+            command=lambda: self.browse_directory("Parent Folder", self.process_passes_root_path)
+        ).grid(row=0, column=2)
         
-        # Mountain passes reference shapefile
+        # Mountain passes reference geojson
         ttk.Label(process_passes_frame, text="Reference Passes:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.ref_mountain_passes_path = tk.StringVar(value=resource_path(os.path.join("data", "passes", "passes_osm_4326.shp")))
+        self.ref_mountain_passes_path = tk.StringVar(
+            value=resource_path(os.path.join("data", "passes", "passesosmalps.geojson"))
+        )
         ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path, width=50).grid(row=1, column=1, padx=5)
-        ttk.Button(process_passes_frame, text="Browse", 
-                  command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, 
-                                                 [("Shapefile", "*.shp")])).grid(row=1, column=2)
+        ttk.Button(
+            process_passes_frame, 
+            text="Browse", 
+            command=lambda: self.browse_file("Reference Passes", self.ref_mountain_passes_path, [("GeoJSON", "*.geojson")])
+        ).grid(row=1, column=2)
         
         # Help section
         self.help_visible = False
-        help_button = ttk.Button(process_passes_frame, text="Show Help ▼", 
-                                command=lambda: self.toggle_help_section(help_button, help_frame))
-        help_button.grid(row=2, column=0, columnspan=3, pady=(10,0), sticky='ew')
+        help_button = ttk.Button(
+            process_passes_frame, 
+            text="Show Help ▼", 
+            command=lambda: self.toggle_help_section(help_button, help_frame)
+        )
+        help_button.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky='ew')
         
         # Help content frame (initially hidden)
         help_frame = ttk.Frame(process_passes_frame)
@@ -309,20 +304,23 @@ class MountainCirclesGUI:
         help_frame.grid_remove()  # Initially hidden
         
         help_text = """This tool processes mountain passes data in three steps:
-
-1. Collection: Gathers and merges all CSV files containing pass data from the parent folder and all subfolders. For example if you run full alps calculation with "create_mountain_passes" set to true for L/D 20, 25, 30, select as parent folder "results/alps".
+        
+1. Collection: Gathers and merges all CSV files containing pass data from the parent folder and all subfolders.
 2. Conversion: Converts the collected data and transforms it to the correct coordinate system.
-3. Filtering: Compares with known passes from Open Street Map database and keeps only the closest matches, thus getting proper location, names, and altitudes. This file needs to be a shp file, you can make it from OSM data, using overpass turbo or other tools, or download from https://www.geofabrik.de/ or https://download.geofabrik.de/.
+3. Filtering: Compares with known passes from Open Street Map database and keeps only the closest matches.
 
 Output will be saved in:
-parent_folder/processed_passes/processed_passes.shp"""
+parent_folder/processed_passes/processed_passes.geojson"""
         
         help_label = ttk.Label(help_frame, text=help_text, justify='left', wraplength=450)
         help_label.pack(pady=10)
         
         # Process button
-        ttk.Button(process_passes_frame, text="Process Passes", 
-                  command=self.process_passes).grid(row=4, column=0, columnspan=3, pady=10)
+        ttk.Button(
+            process_passes_frame, 
+            text="Process Passes", 
+            command=self.process_passes
+        ).grid(row=4, column=0, columnspan=3, pady=10)
 
     def browse_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a file and update the corresponding variable"""
@@ -627,6 +625,7 @@ parent_folder/processed_passes/processed_passes.shp"""
     def process_data(self, config_path):
         """Run the main processing function"""
         try:
+            multiprocessing.freeze_support()
             launch.main(resource_path(config_path))
             self.root.after(0, self.processing_complete)
         except Exception as e:
@@ -725,12 +724,8 @@ parent_folder/processed_passes/processed_passes.shp"""
         current_tab = self.notebook.select()
         tab_index = self.notebook.index(current_tab)
         
-        if tab_index == 0:  # Run tab
+        if tab_index == 1:  # Run tab
             canvas = self.canvas
-        elif tab_index == 1:  # Download tab
-            canvas = self.download_canvas
-        elif tab_index == 2:  # Utilities tab
-            canvas = self.utilities_canvas
             
         if canvas:
             if event.num == 4:  # Linux scroll up
@@ -780,8 +775,8 @@ parent_folder/processed_passes/processed_passes.shp"""
             os.makedirs(output_dir, exist_ok=True)
             
             # Set paths for intermediate and output files
-            intermediate_path = resource_path(os.path.join(output_dir, "intermediate_passes.shp"))
-            output_path = resource_path(os.path.join(output_dir, "processed_passes.shp"))
+            intermediate_path = resource_path(os.path.join(output_dir, "intermediate_passes.geojson"))
+            output_path = resource_path(os.path.join(output_dir, "processed_passes.geojson"))
             
             process_passes(root_folder, input_crs, intermediate_path, mountain_passes_path, output_path)
             messagebox.showinfo("Success", "Passes processed successfully!")
@@ -798,6 +793,10 @@ parent_folder/processed_passes/processed_passes.shp"""
         else:
             help_frame.grid_remove()
             button.configure(text="Show Help ▼")
+    
+    def open_download_page(self):
+        """Opens the system's default browser to the download page."""
+        webbrowser.open("https://drive.google.com/drive/folders/1MeU_GSd5152h_8e1rB8i-fspA9_dqah-?usp=sharing")  # Replace with the actual URL you want to open.
     
     class TextRedirector:
         """Redirect stdout to the text widget"""
@@ -817,4 +816,6 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
+    print('gui.py\n')
+    print(sys.path)
     main()

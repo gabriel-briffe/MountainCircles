@@ -20,12 +20,12 @@ def make_individuals(airfield, config):
         print (f"launching {airfield.name}")
     try:
         # Create folder for this airfield
-        airfield_folder = Path(config.calculation_folder) / airfield.name
-        airfield_folder.mkdir(parents=True, exist_ok=True)
+        airfield_folder = os.path.join(config.calculation_folder, airfield.name)
+        os.makedirs(airfield_folder, exist_ok=True)
 
         # Check if the output file already exists, if so, skip processing
-        ASCfile = airfield_folder / 'local.asc'
-        if ASCfile.exists():
+        ASCfile = os.path.join(airfield_folder, 'local.asc')
+        if os.path.exists(ASCfile):
             print(f"Output file already exists for {airfield.name}, skipping this airfield.")
             return 
 

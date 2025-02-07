@@ -4,7 +4,6 @@ import json
 import numpy as np
 import skimage.measure
 from shapely.geometry import LineString, shape, mapping
-from rasterio.transform import from_origin
 import pyproj
 from geojson import Feature, FeatureCollection, LineString as GeoJSONLineString
 
@@ -28,8 +27,6 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
         cellsize = float(header[4][1])
         nodata_value = float(header[5][1])
 
-        # Create an affine transformation
-        transform = from_origin(xllcorner, yllcorner + nrows * cellsize, cellsize, cellsize)
 
         # Replace NoData values with NaN for proper handling in contouring
         data[data == nodata_value] = np.nan
@@ -55,13 +52,15 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
             lines = []
             for i in range(len(contour)):
                 y, x = contour[i]
-                lon, lat = transform * (x, y)
-                lines.append((lon, lat))
+                # Convert pixel coordinates to metric coordinates
+                metric_x = xllcorner + (x * cellsize)
+                metric_y = yllcorner + ((nrows - y - 1) * cellsize)  # y-axis inversion for metric coordinates
+                lines.append((metric_x, metric_y))
             line = LineString(lines)
             contour_geometries.append(line)
             contour_elevations.append(level)
-
         features = []
+        
         for geometry, elevation in zip(contour_geometries, contour_elevations):
             feature = Feature(geometry=GeoJSONLineString(geometry.coords), properties={"ELEV": str(int(elevation))})
             features.append(feature)
