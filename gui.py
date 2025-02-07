@@ -299,30 +299,30 @@ class MountainCirclesGUI:
         
         # Mountain passes shapefile selection
         ttk.Label(josm_frame, text="Mountain Passes file:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.mountain_passes_path = tk.StringVar(value="data/passes/passesosmpyr.shp")
+        self.mountain_passes_path = tk.StringVar(value=os.path.join("data","passes","passesosmpyr.shp"))
         ttk.Entry(josm_frame, textvariable=self.mountain_passes_path, width=50).grid(row=0, column=1, padx=5)
         ttk.Button(josm_frame, text="Browse", 
                   command=lambda: self.browse_file("Shapefile", self.mountain_passes_path, 
                                                  [("Shapefile", "*.shp")], 
-                                                 initialdir="data/passes")).grid(row=0, column=2)
+                                                 initialdir=os.path.join("data","passes"))).grid(row=0, column=2)
         
         # Custom points shapefile selection
         ttk.Label(josm_frame, text="Custom Points file:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.custom_points_path = tk.StringVar(value="data/passes/passesfromcalc4326pyr.shp")
+        self.custom_points_path = tk.StringVar(value=os.path.join("data","passes","passesfromcalc4326pyr.shp"))
         ttk.Entry(josm_frame, textvariable=self.custom_points_path, width=50).grid(row=1, column=1, padx=5)
         ttk.Button(josm_frame, text="Browse", 
                   command=lambda: self.browse_file("Shapefile", self.custom_points_path, 
                                                  [("Shapefile", "*.shp")],
-                                                 initialdir="data/passes")).grid(row=1, column=2)
+                                                 initialdir=os.path.join("data","passes"))).grid(row=1, column=2)
         
         # Output shapefile selection
         ttk.Label(josm_frame, text="Output file:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.josm_output_path = tk.StringVar(value="results/passes/passes4326pyr.shp")
+        self.josm_output_path = tk.StringVar(value=os.path.join("results","passes","passes4326pyr.shp"))
         ttk.Entry(josm_frame, textvariable=self.josm_output_path, width=50).grid(row=2, column=1, padx=5)
         ttk.Button(josm_frame, text="Browse", 
                   command=lambda: self.browse_save_file("Shapefile", self.josm_output_path, 
                                                       [("Shapefile", "*.shp")],
-                                                      initialdir="results/passes")).grid(row=2, column=2)
+                                                      initialdir=os.path.join("results","passes"))).grid(row=2, column=2)
         
         # Filter button
         ttk.Button(josm_frame, text="Filter Passes", 
@@ -507,8 +507,8 @@ class MountainCirclesGUI:
                 ("airfield_file", self.airfield_path.get()),
                 ("topography_file", self.topo_path.get()),
                 ("result_folder", self.result_path.get()),
-                ("compute", "./compute.exe"),
-                ("mapcssTemplate", "./templates/mapcss.mapcss")
+                ("compute", ".\compute.exe"),
+                ("mapcssTemplate", ".\\templates\mapcss.mapcss")
             ])),
             
             ("CRS", OrderedDict([

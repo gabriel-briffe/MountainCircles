@@ -120,7 +120,7 @@ def merge_output_rasters(config, output_filename, sectors_filename):
                 next(file)
 
             for i, line in enumerate(file):
-                if i >= nrows_sub:
+                if i >= nrows_sub-1:
                     break  # Ensure we don't read beyond the specified number of rows
                 row_data = np.fromstring(line, dtype=float, sep=' ')
                 aligned_slice = aligned[start_row + i, start_col:end_col]
