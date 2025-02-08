@@ -80,15 +80,11 @@ If the calculation script doesn't work, try to compile the C++ code as is descri
 - open compute.cpp, agree to install C++ extension..
 - from the main folder, run ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
 
-### Compiling C++ in windows with VSCode (feedback needed)
-- As a mac user, through a windows 11 virtual machine, vscode couldn't build the C++ as is. 
-- I followed the recommendations to install visual studio build tools. windows had to restart to complete installation. 
-- **-->Then do not launch VSCode from the desktop shortcut<--** 
-- Do Windows -> search for "Developer Command Prompt for VS", type in ```cl``` to make sure it is installed and responding, you should see a version number, and not an error. 
-- Then navigate in command line to the folder where you have cloned the repository, do ```code .```, and now VSCode has access to the C++ build tools and will offer them to you.
-- open compute.cpp, agree to install C++ extension..
-- from the main folder, run ```g++ -std=c++11 -o compute.exe cpp/*.cpp cpp/data/*.cpp cpp/io/*.cpp```
-
+### Compiling C++ on windows
+- install the MinGW toolchain. follow this tutorial, skip the vscode installation, no need: https://code.visualstudio.com/docs/cpp/config-mingw
+- When ```g++ --version``` is responding with a version number, navigate to the main folder of the mountaincircles repository that you downloaded and extracted.
+- Run ```g++ -std=c++11 -o compute.exe cpp\main.cpp cpp\data\Cell.cpp cpp\data\Matrix.cpp cpp\io\Params.cpp```
+- Point the program to that file as calculation script when required
 
 # Usage
 
