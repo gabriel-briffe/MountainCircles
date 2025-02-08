@@ -80,7 +80,7 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     for root, _, files in os.walk(config.calculation_folder):
         for file in files:
             if file == 'output_sub.asc':
-                path = os.path.join(root, file)
+                path = os.path.normpath(os.path.join(root, file))
                 with open(path, 'r') as file:
                     ncols = int(next(file).split()[1])
                     nrows = int(next(file).split()[1])
@@ -162,8 +162,8 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     aligned[aligned == 0] = nodata_value
 
     # Write the merged raster
-    output_path = os.path.join(config.calculation_folder, output_filename)
-    sectors_path = os.path.join(config.calculation_folder, sectors_filename)
+    output_path = os.path.normpath(os.path.join(config.calculation_folder, output_filename))
+    sectors_path = os.path.normpath(os.path.join(config.calculation_folder, sectors_filename))
     log_output(f"Done, writing final raster...", output_queue)
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
     log_output(f"Done, writing sector raster...",output_queue)

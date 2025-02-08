@@ -23,12 +23,12 @@ def make_individuals(airfield, config, output_queue=None):
 
     try:
         # Create folder for this airfield
-        airfield_folder = os.path.join(
-            config.calculation_folder, airfield.name)
+        airfield_folder = os.path.normpath(os.path.join(
+            config.calculation_folder, airfield.name))
         os.makedirs(airfield_folder, exist_ok=True)
 
         # Check if the output file already exists, if so, skip processing
-        ASCfile = os.path.join(airfield_folder, 'local.asc')
+        ASCfile = os.path.normpath(os.path.join(airfield_folder, 'local.asc'))
         if os.path.exists(ASCfile):
             log_output(
                 f"Output file already exists for {airfield.name}, skipping this airfield.", output_queue)
@@ -95,15 +95,15 @@ def clean(config):
     calc_folder = config.calculation_folder
     # List all items (files only, as subfolders are not expected)
     items = [item for item in os.listdir(
-        calc_folder) if os.path.isdir(os.path.join(calc_folder, item))]
+        calc_folder) if os.path.isdir(os.path.normpath(os.path.join(calc_folder, item)))]
 
     mountain_passes_folders = []
 
     # Iterate over files in the calculation folder
     for item in items:
-        item_path = os.path.join(calc_folder, item)
+        item_path = os.path.normpath(os.path.join(calc_folder, item))
         for file in os.listdir(item_path):
-            file_path = os.path.join(calc_folder, item, file)
+            file_path = os.path.normpath(os.path.join(calc_folder, item, file))
             if os.path.isfile(file_path):
                 if file_path.endswith("mountain_passes.csv"):
                     # Mark this file for moving
@@ -114,12 +114,12 @@ def clean(config):
     # If any mountain_passes.csv files exist, move their folders into an "individual passes" folder
     if mountain_passes_folders:
         # print("got mountain passes")
-        individual_passes_folder = os.path.join(calc_folder, "individual passes")
+        individual_passes_folder = os.path.normpath(os.path.join(calc_folder, "individual passes"))
         if not os.path.exists(individual_passes_folder):
             os.makedirs(individual_passes_folder)
 
         for folder_path in mountain_passes_folders:
-            target_path = os.path.join(individual_passes_folder, os.path.basename(folder_path))
+            target_path = os.path.normpath(os.path.join(individual_passes_folder, os.path.basename(folder_path)))
             # print("target path: ", target_path)
             if os.path.exists(target_path):
                 if os.path.isdir(target_path):
@@ -131,7 +131,7 @@ def clean(config):
     # Remove files in the calculation folder matching specified criteria
     for file in os.listdir(config.calculation_folder):
         if (file.endswith('.asc') and not file.endswith('_sectors.asc')) or file.endswith('_customCRS.geojson') or file.endswith('_noAirfields.geojson'):
-            os.remove(os.path.join(config.calculation_folder, file))
+            os.remove(os.path.normpath(os.path.join(config.calculation_folder, file)))
 
 
 def main(config_file, output_queue=None):

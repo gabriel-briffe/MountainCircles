@@ -401,9 +401,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
         if initialdir is None:
             initialdir = self.main_folder.get()
         if var == self.calc_script:
-            if os.path.exists(os.path.join(self.main_folder.get(), "common files", "calculation script")):
-                initialdir = os.path.join(
-                    initialdir, "common files", "calculation script")
+            if os.path.exists(os.path.normpath(os.path.join(self.main_folder.get(), "common files", "calculation script"))):
+                initialdir = os.path.normpath(os.path.join(initialdir, "common files", "calculation script"))
 
         if filetypes is None:
             filetypes = [("All files", "*.*")]
@@ -453,12 +452,12 @@ parent_folder/processed_passes/processed_passes.geojson"""
         if path:
             var.set(path)
             if dir_type == "Results Folder":
-                self.real_result_path.set(os.path.join(path, self.name.get()))
+                self.real_result_path.set(os.path.normpath(os.path.join(path, self.name.get())))
             if dir_type == "MountainCircles Folder":
-                self.config_folder.set(os.path.join(
-                    path, "common files", "configuration files"))
-                self.GMstyles_folder.set(os.path.join(
-                    path, "common files", "Guru Map styles"))
+                self.config_folder.set(os.path.normpath(os.path.join(
+                    path, "common files", "configuration files")))
+                self.GMstyles_folder.set(os.path.normpath(os.path.join(
+                    path, "common files", "Guru Map styles")))
                 self.refresh_yaml_list()
 
     def open_airfield_file(self):
@@ -508,7 +507,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             return
 
         # Construct the full path to the selected YAML file
-        full_path = os.path.join(self.config_folder.get(), selected)
+        full_path = os.path.normpath(os.path.join(self.config_folder.get(), selected))
 
         try:
             with open(full_path, 'r') as f:
@@ -557,8 +556,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
             config = self.create_config_dict()
 
             # Create filename from config name
-            filename = os.path.join(
-                self.config_folder.get(), f"{self.name.get()}.yaml")
+            filename = os.path.normpath(os.path.join(
+                self.config_folder.get(), f"{self.name.get()}.yaml"))
 
             # Check if file exists
             if os.path.exists(filename):
@@ -724,8 +723,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
             config = self.create_config_dict()
 
             # Create temporary config file
-            temp_config_path = os.path.join(
-                self.config_folder.get(), "temp_config.yaml")
+            temp_config_path = os.path.normpath(os.path.join(
+                self.config_folder.get(), "temp_config.yaml"))
 
             with open(temp_config_path, 'w') as f:
                 # Write the config in the same format as save_config
@@ -932,13 +931,13 @@ parent_folder/processed_passes/processed_passes.geojson"""
             return
 
         # Create output directory in the parent folder
-        output_dir = os.path.join(root_folder, "processed_passes")
+        output_dir = os.path.normpath(os.path.join(root_folder, "processed_passes"))
         os.makedirs(output_dir, exist_ok=True)
 
         # Set intermediate and output file paths
-        intermediate_path = os.path.join(
-            output_dir, "intermediate_passes.geojson")
-        output_path = os.path.join(output_dir, "processed_passes.geojson")
+        intermediate_path = os.path.normpath(os.path.join(
+            output_dir, "intermediate_passes.geojson"))
+        output_path = os.path.normpath(os.path.join(output_dir, "processed_passes.geojson"))
 
         # Run passes processing in a separate thread so the UI remains responsive.
         thread = threading.Thread(
