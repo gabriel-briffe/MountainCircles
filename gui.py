@@ -424,8 +424,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
                         directory) if f.lower().endswith('.txt')])
                     if txt_files:
                         # Assign the first .txt file to self.topo_CRSfile
-                        self.topo_CRSfile.set(
-                            os.path.join(directory, txt_files[0]))
+                        self.topo_CRSfile.set(os.path.normpath(os.path.join(directory, txt_files[0])))
                         print(
                             f"Automatically detected CRS file: {self.topo_CRSfile.get()}")
                 except Exception as e:
@@ -646,8 +645,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
                 ("CRS_file", self.topo_CRSfile.get()),
                 ("result_folder", self.result_path.get()),
                 ("compute", self.calc_script.get()),
-                ("mapcssTemplate", os.path.join(
-                    self.GMstyles_folder.get(), "circlesAndAirfields.mapcss"))
+                ("mapcssTemplate", os.path.normpath(os.path.join(
+                    self.GMstyles_folder.get(), "circlesAndAirfields.mapcss")))
             ])),
 
             ("CRS", OrderedDict([
