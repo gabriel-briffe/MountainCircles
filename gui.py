@@ -1,17 +1,19 @@
-from src.config import Config
+import os
+import sys
+import subprocess
+import threading
+import multiprocessing
+import queue
+import webbrowser
+
+import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+
+import pandas as pd
+import yaml
+
 from utils.cupConvert import convert_coord
 import launch
-import multiprocessing
-import os
-import pandas as pd
-import subprocess
-import sys
-import threading
-import tkinter as tk
-import webbrowser
-import yaml
-import queue  # Added for the Empty exception
 
 
 class MountainCirclesGUI:
@@ -1009,4 +1011,5 @@ def main():
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     main()
