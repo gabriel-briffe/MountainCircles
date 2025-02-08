@@ -66,23 +66,12 @@ The pictures are with glide parameters L/D 25, ground clearance 100m (100m margi
 # If you want to contribute, or run the code yourself to choose you own airfields and glide parameters:
 
 ### Requirements to make this work so far:
+- fork the repository
+- create a python environnement, activate it then:
+- ``` pip install -r requirements.txt```
+- ``` python gui.py```
 
-- build C++ files (see below)
-- create a conda environnement with the latest python, activate it, and run:
-- ``` conda install conda-forge::pyyaml```
-- ``` conda install conda-forge::pyproj```
-- ``` conda install conda-forge::numpy```
-- ``` conda install conda-forge::gdal```
-- add https://drive.google.com/file/d/1-VK5xH8YsDiYMH_TTw0kfHIHoiT12Jh2/view?usp=sharing in the topography folder
-
-- check the file pathes in the yaml configuration files 
-- ```reset_results: true``` starts by deleting the results of the previous run you launched with this config
-- start with albertville.yaml for just one airfield, then three.yaml is... 3 airfields.. yeah you got it
-
-
-``` 
-python launch.py [config].yaml
- ```
+If the calculation script doesn't work, try to compile the C++ code as is described below.
 
 
 ### Compiling C++ on mac with VSCode
@@ -104,8 +93,8 @@ python launch.py [config].yaml
 # Usage
 
 ### A run with several airfields will provide:
-- a "local" calculation for each individual airfield as "local.asc" (topology of the local) and "airfieldName.gpkg" (the contour lines).
-- a recombined topology for all the airfields, and its contour lines, as .asc and .gpkg in the root folder of the calculation results.
+- a "local" calculation for each individual airfield as "local.asc" (topology of the local) and "airfieldName.geojson" (the contour lines).
+- a recombined topology for all the airfields, and its contour lines, as .asc and .geojson in the root folder of the calculation results.
 - all in the Coordinate Reference System specified in the yaml config file
 
 ### With ```gurumaps: true``` in the yaml config file, it will provide as well:
@@ -117,15 +106,12 @@ python launch.py [config].yaml
 - found in /templates
 - they are copied alongside each geojson, named identically, after calculations, for quicker export
 - Guru Maps docs: https://gurumaps.app/docs/mapcss
-- when playing with the styles, i found out that using android studio's emulator was quicker than exporting to real phone. Some mapcss crashed the app consistently -> clear all app data, or uninstall/reinstall
 
 
 # to do next
 
 - get the missing eastern bit of the alp
-- see if polygon export is viable in the geojson to color the map for each airfield
 - add the ability to choose individual glide/ground clearance/circuit height for each airfield
-- long term: make a self contained executable
 - add airspace. we could start with airspace connected to the ground (P areas, national/regional parks)
 
 
