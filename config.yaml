@@ -1,9 +1,10 @@
-name: aires_securite 
+name: alps 
 
 input_files:
-  airfield_file: ./data/airfields/guide_aires_securite.csv
+  airfield_file: ./data/airfields/alps.csv
   topography_file: ./data/topography/alps_topography.asc
-  result_folder: ./results/aires_securite
+  CRS_file: ./data/topography/crs_alps.txt
+  result_folder: ./results/alps
   compute: ./compute.exe
   mapcssTemplate: ./templates/mapcss.mapcss
 

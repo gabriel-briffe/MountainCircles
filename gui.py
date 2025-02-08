@@ -820,7 +820,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
         try:
             multiprocessing.freeze_support()
             # Pass the shared output_queue to your launch function
-            launch.main((config_path), output_queue)
+            launch.main(config_path, output_queue)
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message
