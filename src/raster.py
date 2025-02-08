@@ -111,7 +111,7 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     # Process each raster file one by one
     sector=0
     for path, ncols_sub, nrows_sub, xllcorner, yllcorner, cellsize in all_headers:
-        # log_output(f"aligining {path}", output_queue)
+        log_output(f"aligining {path}", output_queue)
         # Calculate positions in the aligned grid
         start_row = nrows_total - int((yllcorner + nrows_sub * cellsize - min_y) / cellsize)
         end_row = start_row + nrows_sub
@@ -136,8 +136,8 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
                 next(file)
 
             for i, line in enumerate(file):
-                if i >= nrows_sub-1:
-                    log_output("something wrong with file", output_queue)
+                if i >= nrows_sub:
+                    log_output("out of bounds", output_queue)
                     break  # Ensure we don't read beyond the specified number of rows
 
                 row_data = np.fromstring(line, dtype=float, sep=' ')
