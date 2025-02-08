@@ -1,7 +1,6 @@
 import os
 import csv
 import json
-# from typing import Dict, Any
 from typing import List
 from pyproj import Transformer
 
@@ -55,11 +54,10 @@ def csv_to_geojson(config):
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
-    # Initialize GeoJSON structure
     # Initialize GeoJSON structure with the specified format
     geojson = {
         "type": "FeatureCollection",
-        "name": "OGRGeoJSON",  # You might want to change this to something more appropriate for airfields
+        "name": "AF_from_csv_no_conversion",  # You might want to change this to something more appropriate for airfields
         "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }},
         "features": []
     }

@@ -70,7 +70,7 @@ def align_rasters(rasters, cellsize):
 
 
 def merge_output_rasters(config, output_filename, sectors_filename, output_queue=None):
-
+    log_output("merging final raster", output_queue)
     nodata_value = float(config.max_altitude)
     # nodata_value = config.max_altitude
 
@@ -94,14 +94,16 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
         log_output("No output_sub.asc files found to merge.", output_queue)
         return
 
+    cellsize=all_headers[0][5]
+
     # Determine the extent of the entire area
     min_x = min(header[3] for header in all_headers)
-    max_x = max(header[3] + header[1] * header[5] for header in all_headers)
+    max_x = max(header[3] + header[1] * cellsize for header in all_headers)
     min_y = min(header[4] for header in all_headers)
-    max_y = max(header[4] + header[2] * header[5] for header in all_headers)
-    
-    ncols_total = int((max_x - min_x) / all_headers[0][5])
-    nrows_total = int((max_y - min_y) / all_headers[0][5])
+    max_y = max(header[4] + header[2] * cellsize for header in all_headers)
+
+    ncols_total = int((max_x - min_x) / cellsize)
+    nrows_total = int((max_y - min_y) / cellsize)
     
     # Initialize the aligned array with nodata_value
     aligned = np.full((nrows_total, ncols_total), nodata_value)
@@ -109,11 +111,24 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     # Process each raster file one by one
     sector=0
     for path, ncols_sub, nrows_sub, xllcorner, yllcorner, cellsize in all_headers:
+        # log_output(f"aligining {path}", output_queue)
         # Calculate positions in the aligned grid
         start_row = nrows_total - int((yllcorner + nrows_sub * cellsize - min_y) / cellsize)
         end_row = start_row + nrows_sub
         start_col = int((xllcorner - min_x) / cellsize)
         end_col = start_col + ncols_sub
+
+        # Debugging: Print dimensions and calculated indices
+        # print(f"File: {path}")
+        # print(f"Sub-raster dimensions rows x cols :{nrows_sub}x{ncols_sub}")
+        # print(f"Aligned dimensions rows x cols :{nrows_total}x{ncols_total}")
+        # print(f"Start Row: {start_row}, End Row: {end_row}")
+        # print(f"Start Col: {start_col}, End Col: {end_col}")
+
+        # Add bounds checking
+        if start_row < 0 or end_row > nrows_total or start_col < 0 or end_col > ncols_total:
+            log_output(f"airfield local matrix going out of bound of reconstructed matrix, skipping 1 line: {path}", output_queue)
+            continue  # Skip this file if out of bounds
 
         # Read the data in chunks to avoid memory issues
         with open(path, 'r') as file:
@@ -122,7 +137,9 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
 
             for i, line in enumerate(file):
                 if i >= nrows_sub:
+                    log_output("something wrong with file", output_queue)
                     break  # Ensure we don't read beyond the specified number of rows
+
                 row_data = np.fromstring(line, dtype=float, sep=' ')
                 aligned_slice = aligned[start_row + i, start_col:end_col]
                 sectors_slice = sectors[start_row + i, start_col:end_col]
@@ -141,15 +158,17 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
 
 
     # Set merged data to nodata_value where data equals zero
+    log_output("removing ground from merged raster", output_queue)
     aligned[aligned == 0] = nodata_value
 
     # Write the merged raster
     output_path = os.path.join(config.calculation_folder, output_filename)
     sectors_path = os.path.join(config.calculation_folder, sectors_filename)
+    log_output(f"Done, writing final raster...", output_queue)
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
-    log_output(f"Merged raster written to {output_path}",output_queue)
+    log_output(f"Done, writing sector raster...",output_queue)
     write_asc(sectors, sectors_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
-    log_output(f"Sector raster written to {sectors_path}",output_queue)
+    log_output(f"Post processing final raster...",output_queue)
 
     postProcess(config.calculation_folder, config.calculation_folder, config, output_path, config.merged_output_name)
 

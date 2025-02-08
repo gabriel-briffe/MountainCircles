@@ -4,8 +4,8 @@ input_files:
   airfield_file: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/airfield files/three.csv
   topography_file: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/topography and CRS/alps_topography.asc
   result_folder: /Users/gabrielbriffe/Desktop/MountainCircles/Alps/---RESULTS---/three
-  compute: /Users/gabrielbriffe/code/opentopo/code/MountainCircles/./compute.exe
-  mapcssTemplate: /Users/gabrielbriffe/code/opentopo/code/MountainCircles/./templates/mapcss.mapcss
+  compute: ./compute.exe
+  mapcssTemplate: ./templates/mapcss.mapcss
 
 CRS:
   name: 100001
