@@ -136,7 +136,7 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
                 next(file)
 
             for i, line in enumerate(file):
-                if i >= nrows_sub:
+                if i >= nrows_sub-1:
                     log_output("something wrong with file", output_queue)
                     break  # Ensure we don't read beyond the specified number of rows
 
