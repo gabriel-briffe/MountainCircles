@@ -43,16 +43,23 @@ class MountainCirclesGUI:
         self.name = tk.StringVar(value="")
         self.airfield_path = tk.StringVar(value="")
         self.topo_path = tk.StringVar(value="")
+        self.topo_CRSfile = tk.StringVar(value="")
+        self.input_crs = tk.StringVar(value="")
         self.result_path = tk.StringVar(value="")
         self.real_result_path = tk.StringVar(value="")
         self.glide_ratio = tk.StringVar(value="")
         self.ground_clearance = tk.StringVar(value="")
         self.circuit_height = tk.StringVar(value="")
         self.max_altitude = tk.StringVar(value="")
+        self.contour_height = tk.StringVar(value="")
         self.gurumaps = tk.BooleanVar(value=False)
         self.export_passes = tk.BooleanVar(value=False)
         self.reset_results = tk.BooleanVar(value=False)
         self.clean_temporary_files = tk.BooleanVar(value=False)
+        self.ref_mountain_passes_path = tk.StringVar(value="")
+        self.cup_input_path = tk.StringVar(value="")
+        self.cup_output_path = tk.StringVar(value="")
+        self.process_passes_CRSfile = tk.StringVar(value="")
 
         # Setup tabs
         self.setup_download_tab()
@@ -83,25 +90,27 @@ class MountainCirclesGUI:
             content_frame, text="... unzip the file, check the contents, and put the MountainCircles folder where you like")
         label.pack(pady=5)
 
-        label = ttk.Label(content_frame, text="DO NOT CHANGE THE NAMES")
+        label = ttk.Label(
+            content_frame, text="( DO NOT RENAME THE FOLDERS AND FILES )")
         label.pack(pady=5)
 
-        label = ttk.Label(content_frame, text="and tell the app where are :")
+        label = ttk.Label(
+            content_frame, text="and tell the app where you put :")
         label.pack(pady=5)
 
         param_frame = ttk.Frame(content_frame, padding="5")
         param_frame.pack(pady=10)
 
-        # Main Folder
-        ttk.Label(param_frame, text="MountainCircle folder:").grid(
+        # MountainCircles Folder
+        ttk.Label(param_frame, text="the MountainCircle folder:").grid(
             row=1, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.main_folder).grid(
             row=1, column=1, padx=5, sticky="ew")
         ttk.Button(param_frame, text="Browse", command=lambda: self.browse_directory(
-            "Main Folder", self.main_folder)).grid(row=1, column=2)
+            "MountainCircles Folder", self.main_folder)).grid(row=1, column=2)
 
         # Calculation script
-        ttk.Label(param_frame, text="Calculation script:").grid(
+        ttk.Label(param_frame, text="the calculation script:").grid(
             row=3, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.calc_script).grid(
             row=3, column=1, padx=5, sticky="ew")
@@ -186,61 +195,75 @@ class MountainCirclesGUI:
         ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file(
             "Topography File", self.topo_path)).grid(row=3, column=2)
 
-        # Result folder selection
-        ttk.Label(param_frame, text="Result Folder: (.../RESULTS/alps for ex.)").grid(
+        # CRS file selection added after topography section
+        ttk.Label(param_frame, text="CRS File:").grid(
             row=4, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.result_path).grid(
+        ttk.Entry(param_frame, textvariable=self.topo_CRSfile).grid(
             row=4, column=1, padx=5, sticky="ew")
+        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file(
+            "CRS File", self.topo_CRSfile, [("Text files", "*.txt")])).grid(row=4, column=2)
+
+        # Result folder selection (shifted down to row 5)
+        ttk.Label(param_frame, text="Result Folder: (.../RESULTS/alps for ex.)").grid(
+            row=5, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.result_path).grid(
+            row=5, column=1, padx=5, sticky="ew")
         ttk.Button(param_frame, text="Browse", command=lambda: self.browse_directory(
-            "Results Folder", self.result_path)).grid(row=4, column=2)
+            "Results Folder", self.result_path)).grid(row=5, column=2)
 
         # Glide Parameters Section
         ttk.Label(param_frame, text="Glide Parameters", font=(
-            'Arial', 10, 'bold')).grid(row=5, column=0, sticky="w", pady=(15, 5))
+            'Arial', 10, 'bold')).grid(row=6, column=0, sticky="w", pady=(15, 5))
 
         # Glide ratio
         ttk.Label(param_frame, text="Glide Ratio:").grid(
-            row=6, column=0, sticky="w")
+            row=7, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.glide_ratio,
-                  width=10).grid(row=6, column=1, sticky="w", padx=5)
+                  width=10).grid(row=7, column=1, sticky="w", padx=5)
 
         # Ground clearance
         ttk.Label(param_frame, text="Ground Clearance (m):").grid(
-            row=7, column=0, sticky="w")
+            row=8, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.ground_clearance,
-                  width=10).grid(row=7, column=1, sticky="w", padx=5)
+                  width=10).grid(row=8, column=1, sticky="w", padx=5)
 
         # Circuit height
         ttk.Label(param_frame, text="Circuit Height (m):").grid(
-            row=8, column=0, sticky="w")
+            row=9, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.circuit_height,
-                  width=10).grid(row=8, column=1, sticky="w", padx=5)
+                  width=10).grid(row=9, column=1, sticky="w", padx=5)
 
         # Max altitude
         ttk.Label(param_frame, text="Max Altitude (m):").grid(
-            row=9, column=0, sticky="w")
+            row=10, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.max_altitude,
-                  width=10).grid(row=9, column=1, sticky="w", padx=5)
+                  width=10).grid(row=10, column=1, sticky="w", padx=5)
 
         # Additional Options Section
         ttk.Label(param_frame, text="Additional Options", font=(
-            'Arial', 10, 'bold')).grid(row=10, column=0, sticky="w", pady=(15, 5))
+            'Arial', 10, 'bold')).grid(row=11, column=0, sticky="w", pady=(15, 5))
+
+        # New Field: Contour Height
+        ttk.Label(param_frame, text="Altitude delta between circles (m):").grid(
+            row=12, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.contour_height,
+                  width=10).grid(row=12, column=1, sticky="w", padx=5)
 
         # Checkboxes
-        ttk.Checkbutton(param_frame, text="Wipe result folder",
-                        variable=self.reset_results).grid(row=11, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Wipe result folder (when testing)",
+                        variable=self.reset_results).grid(row=13, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Generate data files for Guru Maps",
-                        variable=self.gurumaps).grid(row=12, column=0, sticky="w")
+                        variable=self.gurumaps).grid(row=14, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Create mountain passes files",
-                        variable=self.export_passes).grid(row=13, column=0, sticky="w")
+                        variable=self.export_passes).grid(row=15, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Clean temporary files",
-                        variable=self.clean_temporary_files).grid(row=14, column=0, sticky="w")
+                        variable=self.clean_temporary_files).grid(row=16, column=0, sticky="w")
 
         param_frame.grid_columnconfigure(1, weight="1")
 
         # Control buttons frame
         control_btn_frame = ttk.Frame(main_frame)
-        control_btn_frame.grid(row=15, column=0, columnspan=3, pady=10)
+        control_btn_frame.grid(row=17, column=0, columnspan=3, pady=10)
         ttk.Button(control_btn_frame, text="Clear Log",
                    command=self.clear_log).pack(side=tk.LEFT, padx=5)
 
@@ -254,17 +277,17 @@ class MountainCirclesGUI:
 
         # Status display area
         ttk.Label(main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(
-            row=16, column=0, sticky="w", pady=5)
+            row=18, column=0, sticky="w", pady=5)
         self.status_text = tk.Text(main_frame)
         self.status_text.grid(
-            row=17, column=0, columnspan=3, pady=5, sticky="nsew")
+            row=19, column=0, columnspan=3, pady=5, sticky="nsew")
         scroller = ttk.Scrollbar(
             main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
-        scroller.grid(row=17, column=3, sticky="ns")
+        scroller.grid(row=19, column=3, sticky="ns")
         self.status_text['yscrollcommand'] = scroller.set
 
         main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_rowconfigure(17, weight=1)
+        main_frame.grid_rowconfigure(19, weight=1)
 
     def setup_utilities_tab(self):
         """Setup the Utilities tab without scroll functionality"""
@@ -283,7 +306,6 @@ class MountainCirclesGUI:
         # Input file selection
         ttk.Label(cup_frame, text="Input CUP file:").grid(
             row=1, column=0, sticky="w")
-        self.cup_input_path = tk.StringVar()
         ttk.Entry(cup_frame, textvariable=self.cup_input_path).grid(
             row=1, column=1, sticky="ew", padx=5)
         ttk.Button(cup_frame, text="Browse", command=lambda: self.browse_file(
@@ -292,7 +314,6 @@ class MountainCirclesGUI:
         # Output file selection
         ttk.Label(cup_frame, text="Output CSV file:").grid(
             row=2, column=0, sticky="w", pady=5)
-        self.cup_output_path = tk.StringVar()
         ttk.Entry(cup_frame, textvariable=self.cup_output_path).grid(
             row=2, column=1, sticky="ew", padx=5)
         ttk.Button(cup_frame, text="Browse", command=lambda: self.browse_save_file(
@@ -324,21 +345,28 @@ class MountainCirclesGUI:
         # Mountain passes reference geojson
         ttk.Label(process_passes_frame, text="Reference Passes:").grid(
             row=1, column=0, sticky="w", pady=5)
-        self.ref_mountain_passes_path = tk.StringVar(value="")
         ttk.Entry(process_passes_frame, textvariable=self.ref_mountain_passes_path).grid(
             row=1, column=1, sticky="ew", padx=5)
         ttk.Button(process_passes_frame, text="Browse", command=lambda: self.browse_file(
             "Reference Passes", self.ref_mountain_passes_path, [("GeoJSON", "*.geojson")])).grid(row=1, column=2)
 
+        # CRS File
+        ttk.Label(process_passes_frame, text="CRS File:").grid(
+            row=2, column=0, sticky="w", pady=5)
+        ttk.Entry(process_passes_frame, textvariable=self.process_passes_CRSfile).grid(
+            row=2, column=1, sticky="ew", padx=5)
+        ttk.Button(process_passes_frame, text="Browse", command=lambda: self.browse_file(
+            "CRS File", self.process_passes_CRSfile, [("Text files", "*.txt")])).grid(row=2, column=2)
+
         # Help section
         self.help_visible = False
         help_button = ttk.Button(process_passes_frame, text="Show Help ▼",
                                  command=lambda: self.toggle_help_section(help_button, help_frame))
-        help_button.grid(row=2, column=1,  pady=(10, 0), sticky='ew')
+        help_button.grid(row=3, column=1, pady=(10, 0), sticky='ew')
 
         # Help content frame (initially hidden)
         help_frame = ttk.Frame(process_passes_frame)
-        help_frame.grid(row=3, column=0, columnspan=3, sticky='ew', padx=5)
+        help_frame.grid(row=4, column=0, columnspan=3, sticky='ew', padx=5)
         help_frame.grid_remove()  # Initially hidden
 
         help_text = """This tool processes mountain passes data in three steps:
@@ -356,22 +384,27 @@ parent_folder/processed_passes/processed_passes.geojson"""
 
         # Process button
         ttk.Button(process_passes_frame, text="Process Passes", command=self.process_passes).grid(
-            row=4, column=0, columnspan=3, pady=10)
+            row=5, column=0, columnspan=3, pady=10)
 
         process_passes_frame.grid_columnconfigure(1, weight=1)
 
         main_frame.grid_columnconfigure(0, weight=1)
 
+    def open_download_page(self):
+        """Opens the system's default browser to the download page."""
+        webbrowser.open(
+            # Replace with the actual URL you want to open.
+            "https://drive.google.com/drive/folders/1MeU_GSd5152h_8e1rB8i-fspA9_dqah-?usp=sharing")
+
     def browse_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a file and update the corresponding variable"""
-        # Set default initial directories based on file type
         if initialdir is None:
             initialdir = self.main_folder.get()
+        if var == self.calc_script:
+            if os.path.exists(os.path.join(self.main_folder.get(), "common files", "calculation script")):
+                initialdir = os.path.join(
+                    initialdir, "common files", "calculation script")
 
-        # # Create directory if it doesn't exist
-        # os.makedirs(initialdir, exist_ok=True)
-
-        # Default filetypes if none provided
         if filetypes is None:
             filetypes = [("All files", "*.*")]
 
@@ -382,6 +415,21 @@ parent_folder/processed_passes/processed_passes.geojson"""
         )
         if path:
             var.set(path)
+            # If browsing for a Topography File, check if there is a .txt file in the same folder.
+            if file_type == "Topography File":
+                directory = os.path.dirname(path)
+                try:
+                    # List all .txt files in the directory (using sorted order to be predictable)
+                    txt_files = sorted([f for f in os.listdir(
+                        directory) if f.lower().endswith('.txt')])
+                    if txt_files:
+                        # Assign the first .txt file to self.topo_CRSfile
+                        self.topo_CRSfile.set(
+                            os.path.join(directory, txt_files[0]))
+                        print(
+                            f"Automatically detected CRS file: {self.topo_CRSfile.get()}")
+                except Exception as e:
+                    print(f"Error checking for CRS file in {directory}: {e}")
 
     def browse_save_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a save location and update the corresponding variable"""
@@ -397,38 +445,47 @@ parent_folder/processed_passes/processed_passes.geojson"""
         if path:
             var.set(path)
 
-    def convert_cup_file(self):
-        """Convert CUP file to CSV using cupConvert.py logic"""
-        input_path = self.cup_input_path.get()
-        output_path = self.cup_output_path.get()
+    def browse_directory(self, dir_type, var):
+        """Browse for a directory and update the corresponding variable"""
+        # Use self.main_folder as the initial directory if it is set; otherwise, use the current working directory.
+        initial_dir = self.main_folder.get() if self.main_folder.get() else os.getcwd()
+        path = filedialog.askdirectory(
+            title=f"Select {dir_type}", initialdir=initial_dir)
+        if path:
+            var.set(path)
+            if dir_type == "Results Folder":
+                self.real_result_path.set(os.path.join(path, self.name.get()))
+            if dir_type == "MountainCircles Folder":
+                self.config_folder.set(os.path.join(
+                    path, "common files", "configuration files"))
+                self.GMstyles_folder.set(os.path.join(
+                    path, "common files", "Guru Map styles"))
+                self.refresh_yaml_list()
 
-        if not input_path or not output_path:
-            messagebox.showerror(
-                "Error", "Please select both input and output files.")
+    def open_airfield_file(self):
+        """Open the airfield file with system's default application or let user choose"""
+        file_path = self.airfield_path.get()
+
+        if not file_path:
+            messagebox.showwarning(
+                "Warning", "Please select an airfield file first.")
+            return
+
+        if not os.path.exists(file_path):
+            messagebox.showwarning("Warning", "Selected file does not exist.")
             return
 
         try:
-            # Read the input CUP file
-            df = pd.read_csv(input_path)
-
-            # Remove the version line if it's at the beginning
-            df = df[df['name'] != 'version=']
-
-            # Convert coordinates
-            df['lat_dd'] = df['lat'].apply(convert_coord)
-            df['lon_dd'] = df['lon'].apply(convert_coord)
-
-            # Select and rename fields
-            df = df[['name', 'lon_dd', 'lat_dd']]
-            df.rename(columns={'lat_dd': 'y', 'lon_dd': 'x'}, inplace=True)
-
-            # Save to CSV
-            df.to_csv(output_path, index=False)
-
-            messagebox.showinfo("Success", "File converted successfully!")
-
+            if sys.platform == 'darwin':  # macOS
+                # You can change TextEdit to your preferred editor
+                subprocess.run(['open', '-a', 'TextEdit', file_path])
+            elif sys.platform == 'win32':  # Windows
+                # This will open with the default application
+                os.startfile(file_path)
+            else:  # Linux
+                subprocess.run(['xdg-open', file_path])
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to convert file: {str(e)}")
+            messagebox.showerror("Error", f"Failed to open file: {str(e)}")
 
     def refresh_yaml_list(self):
         """Refresh the list of YAML files in the dropdown"""
@@ -451,14 +508,18 @@ parent_folder/processed_passes/processed_passes.geojson"""
         if not selected:
             return
 
+        # Construct the full path to the selected YAML file
+        full_path = os.path.join(self.config_folder.get(), selected)
+
         try:
-            with open(selected, 'r') as f:
+            with open(full_path, 'r') as f:
                 config = yaml.safe_load(f)
 
             # Update GUI fields with loaded values
             self.name.set(config.get('name', 'gui_generated'))
             self.airfield_path.set(config['input_files']['airfield_file'])
             self.topo_path.set(config['input_files']['topography_file'])
+            self.topo_CRSfile.set(config['input_files']['CRS_file'])
             self.result_path.set(config['input_files']['result_folder'])
 
             self.glide_ratio.set(
@@ -470,6 +531,9 @@ parent_folder/processed_passes/processed_passes.geojson"""
 
             self.max_altitude.set(
                 str(config['calculation_parameters']['max_altitude']))
+
+            # New: Load contour height from rendering section
+            self.contour_height.set(str(config['rendering']['contour_height']))
 
             self.gurumaps.set(config.get('gurumaps', True))
             self.export_passes.set(config.get('exportPasses', False))
@@ -484,6 +548,12 @@ parent_folder/processed_passes/processed_passes.geojson"""
     def save_config(self):
         """Save current parameters to a YAML configuration file"""
         try:
+            # Check if MountainCircles Folder has been filled
+            if not self.main_folder.get().strip():
+                messagebox.showerror(
+                    "Error", "Please tell the app in the download tab where you put the MountainCircle folder before saving the configuration.")
+                return
+
             self.validate_inputs()
             config = self.create_config_dict()
 
@@ -573,6 +643,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             ("input_files", OrderedDict([
                 ("airfield_file", self.airfield_path.get()),
                 ("topography_file", self.topo_path.get()),
+                ("CRS_file", self.topo_CRSfile.get()),
                 ("result_folder", self.result_path.get()),
                 ("compute", self.calc_script.get()),
                 ("mapcssTemplate", os.path.join(
@@ -580,8 +651,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
             ])),
 
             ("CRS", OrderedDict([
-                ("name", "100001"),
-                ("definition", "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs")
+                ("name", "custom"),
+                ("definition", self.input_crs.get())
             ])),
 
             ("glide_parameters", OrderedDict([
@@ -595,7 +666,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             ])),
 
             ("rendering", OrderedDict([
-                ("contour_height", 100)
+                ("contour_height", int(self.contour_height.get()))
             ])),
 
             ("gurumaps", self.gurumaps.get()),
@@ -623,12 +694,33 @@ parent_folder/processed_passes/processed_passes.geojson"""
             float(self.ground_clearance.get())
             float(self.circuit_height.get())
             float(self.max_altitude.get())
+
         except ValueError:
             raise ValueError("All numeric parameters must be valid numbers")
+        # Validate CRS file
+        try:
+            crs_file_path = self.topo_CRSfile.get()
+
+            # Read the CRS value from the file (which should contain only one line)
+            with open(crs_file_path, "r") as f:
+                self.input_crs.set(f.readline().strip())
+        except Exception as e:
+            raise ValueError(f"Unable to read CRS file: {str(e)}")
 
     def run_processing(self):
         """Run the main processing with current parameters"""
         try:
+            # Check if MountainCircles Folder and Calculation Script fields have been filled
+            missing_fields = []
+            if not self.main_folder.get().strip():
+                missing_fields.append("MountainCircles Folder")
+            if not self.calc_script.get().strip():
+                missing_fields.append("Calculation Script")
+            if missing_fields:
+                messagebox.showerror("Error",
+                                     "The following field(s) are missing on the download tab: " + ", ".join(missing_fields))
+                return
+
             self.validate_inputs()
             config = self.create_config_dict()
 
@@ -782,76 +874,110 @@ parent_folder/processed_passes/processed_passes.geojson"""
         else:  # Linux
             subprocess.run(['xdg-open', result_path])
 
-    def open_airfield_file(self):
-        """Open the airfield file with system's default application or let user choose"""
-        file_path = self.airfield_path.get()
+    def convert_cup_file(self):
+        """Convert CUP file to CSV using cupConvert.py logic"""
+        input_path = self.cup_input_path.get()
+        output_path = self.cup_output_path.get()
 
-        if not file_path:
-            messagebox.showwarning(
-                "Warning", "Please select an airfield file first.")
-            return
-
-        if not os.path.exists(file_path):
-            messagebox.showwarning("Warning", "Selected file does not exist.")
+        if not input_path or not output_path:
+            messagebox.showerror(
+                "Error", "Please select both input and output files.")
             return
 
         try:
-            if sys.platform == 'darwin':  # macOS
-                # You can change TextEdit to your preferred editor
-                subprocess.run(['open', '-a', 'TextEdit', file_path])
-            elif sys.platform == 'win32':  # Windows
-                # This will open with the default application
-                os.startfile(file_path)
-            else:  # Linux
-                subprocess.run(['xdg-open', file_path])
+            # Read the input CUP file
+            df = pd.read_csv(input_path)
+
+            # Remove the version line if it's at the beginning
+            df = df[df['name'] != 'version=']
+
+            # Convert coordinates
+            df['lat_dd'] = df['lat'].apply(convert_coord)
+            df['lon_dd'] = df['lon'].apply(convert_coord)
+
+            # Select and rename fields
+            df = df[['name', 'lon_dd', 'lat_dd']]
+            df.rename(columns={'lat_dd': 'y', 'lon_dd': 'x'}, inplace=True)
+
+            # Save to CSV
+            df.to_csv(output_path, index=False)
+
+            messagebox.showinfo("Success", "File converted successfully!")
+
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to open file: {str(e)}")
-
-    def browse_directory(self, dir_type, var):
-        """Browse for a directory and update the corresponding variable"""
-
-        path = filedialog.askdirectory(title=f"Select {dir_type}",)
-        if path:
-            var.set(path)
-            if dir_type == "Results Folder":
-                self.real_result_path.set(os.path.join(path, self.name.get()))
-            if dir_type == "Main Folder":
-                self.config_folder.set(os.path.join(
-                    path, "common files", "configuration files"))
-                self.GMstyles_folder.set(os.path.join(
-                    path, "common files", "Guru Map styles"))
-                self.refresh_yaml_list()
+            messagebox.showerror("Error", f"Failed to convert file: {str(e)}")
 
     def process_passes(self):
-        """Process mountain passes using process_passes.py logic"""
+        """Process mountain passes using process_passes.py logic,
+        redirecting stdout and stderr to the status text widget and switching to the Run tab."""
+        # Activate the Run tab so that the output is visible
+        self.notebook.select(self.run_tab)
+        # Clear the current log
+        self.clear_log()
+
+        # Get required paths from the UI fields
         root_folder = self.process_passes_root_path.get()
         mountain_passes_path = self.ref_mountain_passes_path.get()
+        crs_file_path = self.process_passes_CRSfile.get()
 
-        if not all([root_folder, mountain_passes_path]):
+        if not all([root_folder, mountain_passes_path, crs_file_path]):
             messagebox.showerror("Error", "Please select all required paths.")
             return
 
+        # Read the CRS value from the file (which should contain only one line)
+        try:
+            with open(crs_file_path, "r") as f:
+                input_crs = f.readline().strip()
+        except Exception as e:
+            messagebox.showerror("Error", f"Unable to read CRS file: {str(e)}")
+            return
+
+        # Create output directory in the parent folder
+        output_dir = os.path.join(root_folder, "processed_passes")
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Set intermediate and output file paths
+        intermediate_path = os.path.join(
+            output_dir, "intermediate_passes.geojson")
+        output_path = os.path.join(output_dir, "processed_passes.geojson")
+
+        # Run passes processing in a separate thread so the UI remains responsive.
+        thread = threading.Thread(
+            target=self.run_process_passes,
+            args=(root_folder, input_crs, intermediate_path,
+                  mountain_passes_path, output_path)
+        )
+        thread.daemon = True
+        thread.start()
+
+    def run_process_passes(self, root_folder, input_crs, intermediate_path, mountain_passes_path, output_path):
+        """Worker function to run process passes with stdout and stderr redirected to the status text widget."""
+        original_stdout = sys.stdout
+        original_stderr = sys.stderr
+
+        # Redirect stdout and stderr to the status text widget
+        sys.stdout = MountainCirclesGUI.TextRedirector(self.status_text)
+        sys.stderr = MountainCirclesGUI.TextRedirector(self.status_text)
         try:
             from utils.process_passes import process_passes
-            # Custom CRS for the Alps region
-            input_crs = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
-
-            # Create output directory in the parent folder
-            output_dir = os.path.join(root_folder, "processed_passes")
-            os.makedirs(output_dir, exist_ok=True)
-
-            # Set paths for intermediate and output files
-            intermediate_path = os.path.join(
-                output_dir, "intermediate_passes.geojson")
-            output_path = os.path.join(output_dir, "processed_passes.geojson")
-
             process_passes(root_folder, input_crs, intermediate_path,
                            mountain_passes_path, output_path)
-            messagebox.showinfo("Success", "Passes processed successfully!")
-
+            # Use after() to schedule GUI updates in the main thread
+            self.root.after(0, lambda: (
+                self.status_text.insert(
+                    tk.END, "Passes processed successfully!\n"),
+                self.status_text.see(tk.END)
+            ))
         except Exception as e:
-            messagebox.showerror(
-                "Error", f"Failed to process passes: {str(e)}")
+            self.root.after(0, lambda: (
+                self.status_text.insert(
+                    tk.END, f"Failed to process passes: {str(e)}\n"),
+                self.status_text.see(tk.END)
+            ))
+        finally:
+            # Restore the original stdout and stderr
+            sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
     def toggle_help_section(self, button, help_frame):
         """Toggle the visibility of the help section"""
@@ -862,12 +988,6 @@ parent_folder/processed_passes/processed_passes.geojson"""
         else:
             help_frame.grid_remove()
             button.configure(text="Show Help ▼")
-
-    def open_download_page(self):
-        """Opens the system's default browser to the download page."""
-        webbrowser.open(
-            # Replace with the actual URL you want to open.
-            "https://drive.google.com/drive/folders/1MeU_GSd5152h_8e1rB8i-fspA9_dqah-?usp=sharing")
 
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""

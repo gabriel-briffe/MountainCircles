@@ -37,7 +37,7 @@ def make_individuals(airfield, config, output_queue=None):
         # Ensure the computation executable exists
         if not os.path.isfile(config.compute):
             raise FileNotFoundError(
-                f"The compute executable does not exist at {config.compute}")
+                f"The calculation script/binary does not exist at {config.compute}")
 
         # Call the C++ function
         command = [
@@ -92,12 +92,43 @@ def make_individuals(airfield, config, output_queue=None):
 
 
 def clean(config):
-    # Remove all output folders
-    for folder in os.listdir(config.calculation_folder):
-        folder = os.path.join(config.calculation_folder, folder)
-        if os.path.isdir(folder):
-            shutil.rmtree(folder)
-    # Remove all .asc, .gpkg, *_noAirfields.geojson files
+    calc_folder = config.calculation_folder
+    # List all items (files only, as subfolders are not expected)
+    items = [item for item in os.listdir(
+        calc_folder) if os.path.isdir(os.path.join(calc_folder, item))]
+
+    mountain_passes_folders = []
+
+    # Iterate over files in the calculation folder
+    for item in items:
+        item_path = os.path.join(calc_folder, item)
+        for file in os.listdir(item_path):
+            file_path = os.path.join(calc_folder, item, file)
+            if os.path.isfile(file_path):
+                if file_path.endswith("mountain_passes.csv"):
+                    # Mark this file for moving
+                    mountain_passes_folders.append(item_path)
+                else:
+                    os.remove(file_path)
+
+    # If any mountain_passes.csv files exist, move their folders into an "individual passes" folder
+    if mountain_passes_folders:
+        # print("got mountain passes")
+        individual_passes_folder = os.path.join(calc_folder, "individual passes")
+        if not os.path.exists(individual_passes_folder):
+            os.makedirs(individual_passes_folder)
+
+        for folder_path in mountain_passes_folders:
+            target_path = os.path.join(individual_passes_folder, os.path.basename(folder_path))
+            # print("target path: ", target_path)
+            if os.path.exists(target_path):
+                if os.path.isdir(target_path):
+                    shutil.rmtree(target_path)
+                else:
+                    os.remove(target_path)
+            shutil.move(folder_path, individual_passes_folder)
+
+    # Remove files in the calculation folder matching specified criteria
     for file in os.listdir(config.calculation_folder):
         if (file.endswith('.asc') and not file.endswith('_sectors.asc')) or file.endswith('_customCRS.geojson') or file.endswith('_noAirfields.geojson'):
             os.remove(os.path.join(config.calculation_folder, file))

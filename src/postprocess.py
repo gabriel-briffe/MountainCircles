@@ -13,6 +13,7 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
     """
     Generates contour lines from an ASCII Grid (.asc) file using NumPy and scikit-image.
     Contours are generated from 0 to max elevation with the given interval.
+    CRS is the original custom CRS of the topography file.
     """
     try:
         # Read the ASC file

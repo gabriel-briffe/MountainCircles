@@ -23,7 +23,7 @@ rendering:
   contour_height: 100
 
 gurumaps: true
-exportPasses: false
+exportPasses: true
 reset_results: true
 clean_temporary_files: true
 
