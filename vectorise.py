@@ -2,10 +2,11 @@ import numpy as np
 from shapely import MultiPolygon
 from skimage import measure
 from shapely.geometry import mapping, LineString, Polygon
-from shapely.ops import polygonize, unary_union
+from shapely.ops import polygonize, unary_union, transform
 import sys
 import json
 import os
+import pyproj
 
 def read_asc(file_path):
     with open(file_path, 'r') as f:
@@ -34,19 +35,13 @@ def pixel_to_map(contour, xllcorner, yllcorner, cellsize, nrows):
         map_coords.append((x, y))
     return map_coords
 
-def main():
-    if len(sys.argv) not in [2, 3]:
-        print("Usage: python vectorise.py <asc_file> [simplify_tolerance]")
-        sys.exit(1)
-    
-    asc_file = sys.argv[1]
+def main(asc_file, source_crs_str, simplify_tolerance=None):
+
     grid, dimensions, coords, nodata_value, all_values = read_asc(asc_file)
     ncols, nrows = dimensions
     xllcorner, yllcorner, cellsize = coords
     
-    if len(sys.argv) == 3:
-        simplify_tolerance = float(sys.argv[2])
-    else:
+    if simplify_tolerance is None:
         simplify_tolerance = cellsize * 5
 
     # Create the "results" folder if it doesn't exist.
@@ -54,6 +49,12 @@ def main():
     os.makedirs(result_folder, exist_ok=True)
 
     base_name = os.path.splitext(os.path.basename(asc_file))[0]
+
+    # Prepare the coordinate transformer: from the initial custom CRS to EPSG:4326.
+    source_crs = pyproj.CRS(source_crs_str)
+    target_crs = pyproj.CRS("EPSG:4326")
+    transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
+    project = transformer.transform
 
     # List to store all GeoJSON features.
     all_features = []
@@ -111,9 +112,10 @@ def main():
 
         # Create features for the current value, adding an "id" field with the value 'v'
         for donut in donuts:
+            transformed_donut = transform(project, donut)
             all_features.append({
                 "type": "Feature",
-                "geometry": mapping(donut),
+                "geometry": mapping(transformed_donut),
                 "properties": {"id": int(v)}
             })
 
@@ -128,4 +130,13 @@ def main():
     print(f"polygons saved to {out_file}")
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) not in [2, 4]:
+        print("Usage: python vectorise.py <asc_file> <source_crs> [simplify_tolerance]")
+        sys.exit(1)
+    
+    asc_file = sys.argv[1]
+    source_crs_str = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
+    simplify_tolerance = float(sys.argv[2]) if len(sys.argv) == 3 else None
+    simplify_tolerance = float(sys.argv[3]) if len(sys.argv) == 4 else None
+
+    main(asc_file, source_crs_str, simplify_tolerance)
