@@ -40,5 +40,5 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # Set to False to avoid a console for a GUI app.
+    console=True,  # Set to False to avoid a console for a GUI app.
 )

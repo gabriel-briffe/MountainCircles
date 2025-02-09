@@ -1011,5 +1011,21 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
+    import multiprocessing
+    import os
+    import traceback
+
+    # This call is required for frozen applications
     multiprocessing.freeze_support()
+
+    # Only call set_executable for the main process
+    if getattr(sys, 'frozen', False) and sys.platform == 'win32':
+        try:
+            multiprocessing.set_executable(sys.executable)
+        except Exception as e:
+            # Log the exception to a file (since using --noconsole means you won't see it)
+            with open(os.path.join(os.getcwd(), "error.log"), "w") as error_file:
+                traceback.print_exc(file=error_file)
+
     main()
