@@ -15,4 +15,4 @@
 /build
 /dist
 /mc
-
+*.asc

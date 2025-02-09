@@ -1,0 +1,31 @@
+name: alps 
+
+input_files:
+  airfield_file: /Users/gabrielbriffe/Downloads/MountainCircles/Alps/airfield files/alps.csv
+  topography_file: /Users/gabrielbriffe/Downloads/MountainCircles/Alps/topography and CRS/alps_topography.asc
+  CRS_file: /Users/gabrielbriffe/Downloads/MountainCircles/Alps/topography and CRS/crs_alps.txt
+  result_folder: /Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three
+  compute: /Users/gabrielbriffe/Downloads/MountainCircles/common files/calculation script/compute_mac_arm
+  mapcssTemplate: /Users/gabrielbriffe/Downloads/MountainCircles/common files/Guru Map styles/circlesAndAirfields.mapcss
+
+CRS:
+  name: custom
+  definition: +proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs
+
+glide_parameters:
+  glide_ratio: 20
+  ground_clearance: 100
+  circuit_height: 250
+
+calculation_parameters:
+  max_altitude: 3000
+
+rendering:
+  contour_height: 100
+
+gurumaps: false
+exportPasses: false
+reset_results: true
+clean_temporary_files: true
+
+merged_output_name: merged_output
