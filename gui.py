@@ -206,7 +206,7 @@ class MountainCirclesGUI:
             "CRS File", self.topo_CRSfile, [("Text files", "*.txt")])).grid(row=4, column=2)
 
         # Result folder selection (shifted down to row 5)
-        ttk.Label(param_frame, text="Result Folder: (.../RESULTS/alps for ex.)").grid(
+        ttk.Label(param_frame, text="Result Folder: (.../RESULTS/configName)").grid(
             row=5, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.result_path).grid(
             row=5, column=1, padx=5, sticky="ew")
@@ -487,19 +487,24 @@ parent_folder/processed_passes/processed_passes.geojson"""
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open file: {str(e)}")
 
-    def refresh_yaml_list(self):
-        """Refresh the list of YAML files in the dropdown"""
+    def refresh_yaml_list(self, active_config=None):
+        """Refresh the list of YAML files in the dropdown.
+        
+        If active_config is provided and exists in the list,
+        that config file will be automatically selected and loaded.
+        """
         directory = self.config_folder.get()
         if os.path.isdir(directory):
-            self.yaml_files = [f for f in os.listdir(
-                directory) if f.endswith('.yaml')]
+            self.yaml_files = [f for f in os.listdir(directory) if f.endswith('.yaml')]
         else:
             self.yaml_files = []
         self.config_dropdown['values'] = self.yaml_files
 
-        # Automatically select the first available YAML file and load it
         if self.yaml_files:
-            self.config_dropdown.current(0)
+            if active_config and active_config in self.yaml_files:
+                self.config_dropdown.current(self.yaml_files.index(active_config))
+            else:
+                self.config_dropdown.current(0)
             self.load_selected_config()
 
     def load_selected_config(self, event=None):
@@ -625,8 +630,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
                 f.write(
                     f"merged_output_name: {config['merged_output_name']}\n")
 
-            # Refresh the dropdown list after saving
-            self.refresh_yaml_list()
+            # Refresh the dropdown list after saving and pass the name of the just-saved config
+            self.refresh_yaml_list(active_config=os.path.basename(filename))
             messagebox.showinfo("Success", "Configuration saved successfully!")
 
         except Exception as e:
