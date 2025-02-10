@@ -86,7 +86,7 @@ class MountainCirclesGUI:
         self.config_folder.set(os.path.normpath(os.path.join(path, "common files", "configuration files")))
         self.GMstyles_folder.set(os.path.normpath(os.path.join(path, "common files", "Guru Map styles")))
         self.help_process_passes_filepath.set(os.path.normpath(os.path.join(path,"common files","help_files","process_passes_help.txt")))
-        # self.help_run_filepath.set(os.path.normpath(os.path.join(path,"common files","help_files","run_help.txt")))
+        self.help_run_filepath.set(os.path.normpath(os.path.join(path,"common files","help_files","run_help.txt")))
         self.refresh_yaml_list()
         # Retrieve system name and architecture using the platform module
         os_name = platform.system()
@@ -313,13 +313,18 @@ class MountainCirclesGUI:
         # Control buttons frame
         control_btn_frame = ttk.Frame(main_frame)
         control_btn_frame.grid(row=17, column=0, columnspan=3, pady=10)
+        
         ttk.Button(control_btn_frame, text="Clear Log",
                    command=self.clear_log).pack(side=tk.LEFT, padx=5)
-
+        
+        # New Help button that opens the run help file
+        ttk.Button(control_btn_frame, text="Help",
+                   command=lambda: self.open_file("help_run")).pack(side=tk.LEFT, padx=5)
+        
         self.run_button = ttk.Button(
             control_btn_frame, text="Run Processing", command=self.run_processing)
         self.run_button.pack(side=tk.LEFT, padx=5)
-
+    
         self.open_results_button = ttk.Button(
             control_btn_frame, text="Open Results Folder", command=self.open_results_folder)
         self.open_results_button.pack(side=tk.LEFT, padx=5)
@@ -486,10 +491,11 @@ class MountainCirclesGUI:
 
     def open_file(self, file_type):
         """Open a file with the system's default application.
-        
+
         file_type: A string specifying which file to open.
-                   "Airfield"   -> open the airfield file using self.airfield_path.
-                   "Help_Passes"-> open the help file using self.help_process_passes_filepath.
+                   "Airfield"    -> opens the airfield file using self.airfield_path.
+                   "Help_Passes" -> opens the help file for passes using self.help_process_passes_filepath.
+                   "help_run"    -> opens the help file for running using self.help_run_filepath.
         """
         if file_type == "Airfield":
             file_path = self.airfield_path.get()
@@ -500,6 +506,11 @@ class MountainCirclesGUI:
             file_path = self.help_process_passes_filepath.get()
             if not file_path:
                 messagebox.showwarning("Warning", "Help file is not set.")
+                return
+        elif file_type == "help_run":
+            file_path = self.help_run_filepath.get()
+            if not file_path:
+                messagebox.showwarning("Warning", "Help file for run is not set.")
                 return
         else:
             messagebox.showerror("Error", f"Unknown file type: {file_type}")
