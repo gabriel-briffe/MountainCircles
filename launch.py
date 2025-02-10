@@ -11,6 +11,8 @@ from pathlib import Path
 from src.logging import log_output
 import time
 
+from utils import process_sectors
+
 
 def make_individuals(airfield, config, output_queue=None):
 
@@ -23,8 +25,7 @@ def make_individuals(airfield, config, output_queue=None):
 
     try:
         # Create folder for this airfield
-        airfield_folder = os.path.normpath(os.path.join(
-            config.calculation_folder, airfield.name))
+        airfield_folder = os.path.normpath(os.path.join(config.calculation_folder_path, airfield.name))
         os.makedirs(airfield_folder, exist_ok=True)
 
         # Check if the output file already exists, if so, skip processing
@@ -84,7 +85,7 @@ def make_individuals(airfield, config, output_queue=None):
 
     # Post-process if all went well
     try:
-        postProcess(str(airfield_folder), Path(config.calculation_folder),
+        postProcess(str(airfield_folder), Path(config.calculation_folder_path),
                     config, str(ASCfile), airfield.name, output_queue)
     except Exception as e:
         log_output(
@@ -92,18 +93,17 @@ def make_individuals(airfield, config, output_queue=None):
 
 
 def clean(config):
-    calc_folder = config.calculation_folder
+    calc_folder_path = config.calculation_folder_path
     # List all items (files only, as subfolders are not expected)
-    items = [item for item in os.listdir(
-        calc_folder) if os.path.isdir(os.path.normpath(os.path.join(calc_folder, item)))]
+    items = [item for item in os.listdir(calc_folder_path) if os.path.isdir(os.path.normpath(os.path.join(calc_folder_path, item)))]
 
     mountain_passes_folders = []
 
     # Iterate over files in the calculation folder
     for item in items:
-        item_path = os.path.normpath(os.path.join(calc_folder, item))
+        item_path = os.path.normpath(os.path.join(calc_folder_path, item))
         for file in os.listdir(item_path):
-            file_path = os.path.normpath(os.path.join(calc_folder, item, file))
+            file_path = os.path.normpath(os.path.join(calc_folder_path, item, file))
             if os.path.isfile(file_path):
                 if file_path.endswith("mountain_passes.csv"):
                     # Mark this file for moving
@@ -114,7 +114,7 @@ def clean(config):
     # If any mountain_passes.csv files exist, move their folders into an "individual passes" folder
     if mountain_passes_folders:
         # print("got mountain passes")
-        individual_passes_folder = os.path.normpath(os.path.join(calc_folder, "individual passes"))
+        individual_passes_folder = os.path.normpath(os.path.join(calc_folder_path, "individual passes"))
         if not os.path.exists(individual_passes_folder):
             os.makedirs(individual_passes_folder)
 
@@ -129,9 +129,9 @@ def clean(config):
             shutil.move(folder_path, individual_passes_folder)
 
     # Remove files in the calculation folder matching specified criteria
-    for file in os.listdir(config.calculation_folder):
+    for file in os.listdir(config.calculation_folder_path):
         if (file.endswith('.asc') and not file.endswith('_sectors.asc')) or file.endswith('_customCRS.geojson') or file.endswith('_noAirfields.geojson'):
-            os.remove(os.path.normpath(os.path.join(config.calculation_folder, file)))
+            os.remove(os.path.normpath(os.path.join(config.calculation_folder_path, file)))
 
 
 def main(config_file, output_queue=None):
@@ -150,9 +150,14 @@ def main(config_file, output_queue=None):
         pool.starmap(make_individuals, [
                      (airfield, config, output_queue) for airfield in converted_airfields])
 
+    sectors_file = f'{config.merged_output_name}_sectors.asc'
+    merged_file = f'{config.merged_output_name}.asc'
     # Merge all output_sub.asc files
-    merge_output_rasters(config, f'{config.merged_output_name}.asc',
-                         f'{config.merged_output_name}_sectors.asc', output_queue)
+    merge_output_rasters(config, merged_file,
+                         sectors_file, output_queue)
+    
+    # Process sectors
+    process_sectors.main(config, 4000, 7, None, output_queue)
 
     # Only clean if clean_temporary_files is True
     if config.clean_temporary_files:

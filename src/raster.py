@@ -77,7 +77,7 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     """Merges all output_sub.asc files from airfield directories in chunks."""
     # First, read all headers to get the extent of all rasters
     all_headers = []
-    for root, _, files in os.walk(config.calculation_folder):
+    for root, _, files in os.walk(config.calculation_folder_path):
         for file in files:
             if file == 'output_sub.asc':
                 path = os.path.normpath(os.path.join(root, file))
@@ -118,12 +118,6 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
         start_col = int((xllcorner - min_x) / cellsize)
         end_col = start_col + ncols_sub
 
-        # Debugging: Print dimensions and calculated indices
-        # print(f"File: {path}")
-        # print(f"Sub-raster dimensions rows x cols :{nrows_sub}x{ncols_sub}")
-        # print(f"Aligned dimensions rows x cols :{nrows_total}x{ncols_total}")
-        # print(f"Start Row: {start_row}, End Row: {end_row}")
-        # print(f"Start Col: {start_col}, End Col: {end_col}")
 
         # Add bounds checking
         if start_row < 0 or end_row > nrows_total or start_col < 0 or end_col > ncols_total:
@@ -143,13 +137,10 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
                 row_data = np.fromstring(line, dtype=float, sep=' ')
                 aligned_slice = aligned[start_row + i, start_col:end_col]
                 sectors_slice = sectors[start_row + i, start_col:end_col]
-                # # Update aligned where the new value is lower or if aligned has nodata_value
-                # np.minimum(aligned_slice, row_data, out=aligned_slice, where=(row_data != nodata_value))
                 # Create a mask for where updates will occur
                 update_mask = (row_data != nodata_value) & (row_data < aligned_slice)
                 sectors_mask = (row_data != nodata_value) & (row_data < aligned_slice)
                 sectors_reset = (row_data == 0) 
-                # update_mask = (row_data != 0) & (row_data < aligned_slice)
                 # Update aligned array
                 aligned_slice[update_mask] = row_data[update_mask]
                 sectors_slice[sectors_mask] = sector
@@ -162,13 +153,15 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     aligned[aligned == 0] = nodata_value
 
     # Write the merged raster
-    output_path = os.path.normpath(os.path.join(config.calculation_folder, output_filename))
-    sectors_path = os.path.normpath(os.path.join(config.calculation_folder, sectors_filename))
+    output_path = config.merged_output_raster_path
+    sectors_path = config.sectors_filepath
+    log_output(f"writing final raster to {output_path}", output_queue)
+    log_output(f"writing sector raster to {sectors_path}", output_queue)
     log_output(f"Done, writing final raster...", output_queue)
     write_asc(aligned, output_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
     log_output(f"Done, writing sector raster...",output_queue)
     write_asc(sectors, sectors_path, ncols_total, nrows_total, min_x, min_y, all_headers[0][5], nodata_value)
     log_output(f"Post processing final raster...",output_queue)
 
-    postProcess(config.calculation_folder, config.calculation_folder, config, output_path, config.merged_output_name)
+    postProcess(config.calculation_folder_path, config.calculation_folder_path, config, output_path, config.merged_output_name)
 

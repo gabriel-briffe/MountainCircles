@@ -92,10 +92,8 @@ def create4326geosonContours(inThisFolder, config, contourFileName, output_queue
     """
     try:
         # Input GeoJSON path (from your custom CRS GeoJSON)
-        input_geojson_path = os.path.normpath(os.path.join(
-            inThisFolder, f'{contourFileName}_customCRS.geojson'))
-        output_geojson_path = os.path.normpath(os.path.join(
-            inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson'))
+        input_geojson_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_customCRS.geojson'))
+        output_geojson_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_noAirfields.geojson'))
 
         # Read the input GeoJSON
         with open(input_geojson_path, 'r') as f:
@@ -146,12 +144,9 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
     This function assumes that you want to merge all features from both GeoJSON files.
     """
     try:
-        geojson_airfields_path = os.path.normpath(os.path.join(
-            config.result_folder_path, "airfields", f"{config.name}.geojson"))
-        geojson_contour_path = os.path.normpath(os.path.join(
-            inThisFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}_noAirfields.geojson'))
-        merged_geojson_path = os.path.normpath(os.path.join(
-            toThatFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}.geojson'))
+        geojson_airfields_path = os.path.normpath(os.path.join(config.result_folder_path, "airfields", f"{config.name}.geojson"))
+        geojson_contour_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_noAirfields.geojson'))
+        merged_geojson_path = os.path.normpath(os.path.join(toThatFolder, f'{contourFileName}.geojson'))
 
         # Read GeoJSON files
         with open(geojson_airfields_path, 'r') as f:
@@ -193,8 +188,7 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
 def copyMapCss(toThatFolder, config, contourFileName, extension, output_queue=None):
     try:
         # copy mapcss for gurumaps export
-        mapcss_file = os.path.normpath(os.path.join(
-            toThatFolder, f'{contourFileName}_{config.glide_ratio}-{config.ground_clearance}-{config.circuit_height}{extension}.mapcss'))
+        mapcss_file = os.path.normpath(os.path.join(toThatFolder, f'{contourFileName}{extension}.mapcss'))
         shutil.copy2(config.mapcssTemplate, mapcss_file)
         log_output(
             f"{contourFileName}: Guru Map style copied successfully", output_queue)
@@ -207,9 +201,6 @@ def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName
     generate_contours_from_asc(
         inThisFolder, config, ASCfilePath, contourFileName, output_queue)
     if (config.gurumaps):
-        create4326geosonContours(inThisFolder, config,
-                                 contourFileName, output_queue)
-        # copyMapCss(inThisFolder, config, contourFileName,"_noAirfields")
-        merge_geojson_files(inThisFolder, toThatFolder,
-                            config, contourFileName, output_queue)
+        create4326geosonContours(inThisFolder, config, contourFileName, output_queue)
+        merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, output_queue)
         copyMapCss(toThatFolder, config, contourFileName, "", output_queue)

@@ -62,7 +62,7 @@ class MountainCirclesGUI:
         self.cup_input_path = tk.StringVar(value="")
         self.cup_output_path = tk.StringVar(value="")
         self.process_passes_CRSfile = tk.StringVar(value="")
-
+        self.merged_output_name = tk.StringVar(value="aa")
         # Setup tabs
         self.setup_download_tab()
         self.setup_run_tab()
@@ -456,10 +456,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
             if dir_type == "Results Folder":
                 self.real_result_path.set(os.path.normpath(os.path.join(path, self.name.get())))
             if dir_type == "MountainCircles Folder":
-                self.config_folder.set(os.path.normpath(os.path.join(
-                    path, "common files", "configuration files")))
-                self.GMstyles_folder.set(os.path.normpath(os.path.join(
-                    path, "common files", "Guru Map styles")))
+                self.config_folder.set(os.path.normpath(os.path.join(path, "common files", "configuration files")))
+                self.GMstyles_folder.set(os.path.normpath(os.path.join(path, "common files", "Guru Map styles")))
                 self.refresh_yaml_list()
 
     def open_airfield_file(self):
@@ -679,7 +677,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             ("reset_results", self.reset_results.get()),
             ("clean_temporary_files", self.clean_temporary_files.get()),
 
-            ("merged_output_name", "merged_output")
+            ("merged_output_name", self.merged_output_name.get())
         ])
 
         return config
@@ -837,8 +835,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
             sys.stdout = original_stdout
             sys.stderr = original_stderr
             # Clean up the temporary config file if it exists
-            if os.path.exists(config_path):
-                os.remove(config_path)
+            # if os.path.exists(config_path):
+            #     os.remove(config_path)
             # Shut down the manager; subsequent queue access will raise errors,
             # but our poll_queue function catches those.
             manager.shutdown()
@@ -942,8 +940,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
         os.makedirs(output_dir, exist_ok=True)
 
         # Set intermediate and output file paths
-        intermediate_path = os.path.normpath(os.path.join(
-            output_dir, "intermediate_passes.geojson"))
+        intermediate_path = os.path.normpath(os.path.join(output_dir, "intermediate_passes.geojson"))
         output_path = os.path.normpath(os.path.join(output_dir, "processed_passes.geojson"))
 
         # Run passes processing in a separate thread so the UI remains responsive.
@@ -1030,7 +1027,7 @@ if __name__ == "__main__":
             multiprocessing.set_executable(sys.executable)
         except Exception as e:
             # Log the exception to a file (since using --noconsole means you won't see it)
-            with open(os.path.join(os.getcwd(), "error.log"), "w") as error_file:
+            with open(os.path.normpath(os.path.join(os.getcwd(), "error.log")), "w") as error_file:
                 traceback.print_exc(file=error_file)
 
     main()
