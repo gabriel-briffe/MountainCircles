@@ -34,89 +34,67 @@ def pixel_to_map(contour, xllcorner, yllcorner, cellsize, nrows):
         map_coords.append((x, y))
     return map_coords
 
-def topological_coloring(polygons, number_of_colors, buffer_distance=5000):
-    """
-    Performs topological coloring on a list of geometries using a custom graph.
-    Graph building steps:
-      1. For each polygon, compute its center as the midpoint of its bounding box.
-         (center = ((minx+maxx)/2, (miny+maxy)/2))
-      2. Compute a buffered version of each polygon using the provided buffer_distance.
-      3. For each polygon, compare it to all others:
-         - If the buffered polygons intersect, add them to an intersecting candidate list along with their distance.
-         - Otherwise, add them to a non-intersecting candidate list.
-      4. From the intersecting candidates, keep only the number_of_colors closest.
-         If the count is still less than number_of_colors, fill the remainder with the closest non-intersecting polygons.
-      5. With the resulting neighbour graph, assign a color recursively.
-         
-    Returns:
-        A mapping {index: color} for each polygon.
-    """
-    graph = {}
-    centers = []
-    buffered_polygons = []
-    for i, poly in enumerate(polygons):
-        minx, miny, maxx, maxy = poly.bounds
-        center = ((minx + maxx) / 2.0, (miny + maxy) / 2.0)
-        centers.append(center)
-        # Create a buffered version of the polygon
-        buffered_polygons.append(poly.buffer(buffer_distance))
-        graph[i] = []
-    
-    for i, poly in enumerate(polygons):
-        intersecting_candidates = []
-        nonintersecting_candidates = []
-        for j, other in enumerate(polygons):
-            if i == j:
-                continue
-            dx = centers[i][0] - centers[j][0]
-            dy = centers[i][1] - centers[j][1]
-            dist = (dx**2 + dy**2)**0.5
-            # Use the buffered polygon for the intersection test.
+def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_attempts=10000):
+    n = len(polygons)
+    # Build a graph based on the buffered polygons.
+    buffered_polygons = [poly.buffer(buffer_distance) for poly in polygons]
+    graph = {i: set() for i in range(n)}
+    for i in range(n):
+        for j in range(i + 1, n):
             if buffered_polygons[i].intersects(buffered_polygons[j]):
-                intersecting_candidates.append((j, dist))
-            else:
-                nonintersecting_candidates.append((j, dist))
-        # Sort the candidate neighbours based on distance.
-        intersecting_candidates.sort(key=lambda x: x[1])
-        nonintersecting_candidates.sort(key=lambda x: x[1])
-        print(f'got {len(intersecting_candidates)} intersecting candidates')
-        print(f'closest non-intersecting candidate: {nonintersecting_candidates[1]}')
-        
-        # Start with the closest intersecting neighbours.
-        neighbors = [j for j, _ in intersecting_candidates][:number_of_colors]
+                graph[i].add(j)
+                graph[j].add(i)
 
-        # If there aren't enough, add the closest non-intersecting ones.
-        if len(neighbors) < number_of_colors:
-            for candidate in nonintersecting_candidates:
-                if candidate[0] not in neighbors:
-                    neighbors.append(candidate[0])
-                    if len(neighbors) == number_of_colors:
-                        break
-        graph[i] = neighbors
-
+    # Dictionary to store the color for each polygon.
     colors = {}
-    used_colors = {i: set() for i in range(len(polygons))}
-    
-    def color_node(node, color):
-        if node not in colors:
-            if color not in used_colors[node]:
-                colors[node] = color
-                for neighbor in graph[node]:
-                    used_colors[neighbor].add(color)
-                    next_color = (color + 1) % number_of_colors
-                    color_node(neighbor, next_color)
-                return True
+    # A mutable counter for attempts to avoid deep recursive search.
+    attempts = [0]
+
+    def is_safe(node, color):
+        """Check if assigning this color to a node is safe."""
+        for neighbor in graph[node]:
+            if neighbor in colors and colors[neighbor] == color:
+                return False
+        return True
+
+    def assign_colors(node_index):
+        """Recursively assign colors via backtracking."""
+        attempts[0] += 1
+        print(f"attempting to color: try number {attempts[0]}", end='\r', flush=True)
+        # Check if we've exceeded our maximum allowed attempts.
+        if attempts[0] > max_attempts:
+            return False
+        if node_index == len(polygons):
+            return True
+
+        for color in range(number_of_colors):
+            if is_safe(node_index, color):
+                colors[node_index] = color
+                if assign_colors(node_index + 1):
+                    return True
+                del colors[node_index]  # Backtrack
         return False
 
-    for node in range(len(polygons)):
-        if node not in colors:
-            for color in range(number_of_colors):
-                if color_node(node, color):
-                    break
-
+    # Try to assign colors using backtracking. If it fails within our allowed attempts, use fallback.
+    if not assign_colors(0):
+        print("Warning : Could not ensure two neighbouring sectors always have different colors; attempting fallback coloring.")
+        print("Warning : Buffer is probably too high; try again with a smaller buffer if not happy with the result.")
+        for node in range(len(polygons)):
+            if node not in colors:
+                # Determine colors already used among the node's neighbours.
+                forbidden_colors = {colors[nbr] for nbr in graph[node] if nbr in colors}
+                # Try to assign one of the original colors that is not forbidden.
+                for candidate in range(number_of_colors):
+                    if candidate not in forbidden_colors:
+                        colors[node] = candidate
+                        break
+                else:
+                    # No allowed color from the palette works; assign a new unique fallback color.
+                    fallback_color = max(colors.values(), default=number_of_colors - 1) + 1
+                    colors[node] = fallback_color
     return colors
 
-def main(asc_file, number_of_colors, source_crs_str, simplify_tolerance):
+def main(asc_file, source_crs_str, buffer_distance, number_of_colors, simplify_tolerance):
 
     grid, dimensions, coords, nodata_value, all_values = read_asc(asc_file)
     ncols, nrows = dimensions
@@ -141,13 +119,12 @@ def main(asc_file, number_of_colors, source_crs_str, simplify_tolerance):
     # Lists to accumulate merged multipolygons (one per unique v) and their associated id (v)
     all_donuts = []
     all_ids = []
-
+    nb_values = len(all_values)
     # Process each unique value (ignoring nodata_value)
     for v in all_values:
+        print(f"Processing sector: {v}/{nb_values}", end='\r', flush=True)
         if v == nodata_value:
             continue
-        
-        # print(f"Processing value: {v}")
 
         mask_v = (grid == v).astype(int)
         contours = measure.find_contours(mask_v, 0.5)
@@ -189,6 +166,7 @@ def main(asc_file, number_of_colors, source_crs_str, simplify_tolerance):
             merged_donut = unary_union(donuts)
             all_donuts.append(merged_donut)
             all_ids.append(int(v))
+    print("all sectors vectorized, going to color them")
 
     # Use topological coloring on the merged geometries with custom neighbour selection.
     all_features = []
@@ -202,7 +180,7 @@ def main(asc_file, number_of_colors, source_crs_str, simplify_tolerance):
                 "geometry": mapping(transformed_geom),
                 "properties": {
                     "id": all_ids[i],
-                    "COLOR": color_mapping[i]
+                    "COLOR": color_mapping[i] if i in color_mapping else number_of_colors
                 }
             }
             all_features.append(feature)
@@ -215,7 +193,7 @@ def main(asc_file, number_of_colors, source_crs_str, simplify_tolerance):
     out_file = os.path.join(result_folder, f"{base_name}.geojson")
     with open(out_file, "w") as f:
         json.dump(geojson, f, indent=2)
-    print(f"polygons saved to {out_file}")
+    print(f"Sectors saved to {out_file}")
 
 if __name__ == "__main__":
     if len(sys.argv) not in [2, 3, 4, 5]:
@@ -225,6 +203,7 @@ if __name__ == "__main__":
     asc_file = sys.argv[1]
     source_crs_str = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
     simplify_tolerance = None
-    number_of_colors = 7
+    number_of_colors =7
+    buffer_distance = 4000
 
-    main(asc_file, number_of_colors, source_crs_str, simplify_tolerance)
+    main(asc_file, source_crs_str, buffer_distance, number_of_colors, simplify_tolerance)
