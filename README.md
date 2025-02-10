@@ -123,6 +123,8 @@ If the calculation script doesn't work, try to recompile the C++ code as is desc
 - add the ability to choose individual glide/ground clearance/circuit height for each airfield
 - add airspace. we could start with airspace connected to the ground (P areas, national/regional parks)
 
+# clean zip from mac
+```zip -r MountainCirclesData.zip . -x "*.DS_Store" -x "__MACOSX/*" -x ".AppleDouble/*" -x "._*"```
 
 # Disclaimer:
 

@@ -1,0 +1,21 @@
+area|z6-[color_id=0] {
+    fill-color: #0000FF22;
+}
+area|z6-[color_id=1] {
+    fill-color: #FF00FF22;
+}
+area|z6-[color_id=2] {
+    fill-color: #FFFF0022;
+}
+area|z6-[color_id=3] {
+    fill-color: #00FFFF22;
+}
+area|z6-[color_id=4] {
+    fill-color: #00FF0022;
+}
+area|z6-[color_id=5] {
+    fill-color: #FF000022;
+}
+area|z6-[color_id=6] {
+    fill-color: #FFA50022;
+}
