@@ -3,9 +3,8 @@ import sys
 import subprocess
 import threading
 import multiprocessing
-import queue
 import webbrowser
-import platform  # Import the platform module
+import platform
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -13,6 +12,7 @@ from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import yaml
 
+from config import load_settings, save_settings
 from utils.cupConvert import convert_coord
 import launch
 
@@ -22,7 +22,14 @@ class MountainCirclesGUI:
         self.root = root
         self.root.title("Mountain Circles")
         self.root.resizable(True, True)
-        self.root.geometry("1200x900")
+        self.root.geometry("1200x1200")
+
+        # Variable to store the user's personal data folder
+        self.main_folder = tk.StringVar(value="")
+        self.calc_script = tk.StringVar(value="")
+        print("-------welcome here---------")
+
+        # Load stored settings if they exist
 
         # Create notebook for tabs
         self.notebook = ttk.Notebook(root)
@@ -39,9 +46,7 @@ class MountainCirclesGUI:
         self.notebook.add(self.utilities_tab, text='Utilities')
 
         # Initialize variables with empty values
-        self.main_folder = tk.StringVar(value="")
         self.config_folder = tk.StringVar(value="")
-        self.calc_script = tk.StringVar(value="")
         self.GMstyles_folder = tk.StringVar(value="")
         self.name = tk.StringVar(value="")
         self.airfield_path = tk.StringVar(value="")
@@ -68,6 +73,12 @@ class MountainCirclesGUI:
         self.setup_download_tab()
         self.setup_run_tab()
         self.setup_utilities_tab()
+        self.load_settings()
+
+
+
+        # Bind window close to saving settings
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def setup_download_tab(self):
         """Setup the Download tab without scroll functionality"""
@@ -1018,6 +1029,34 @@ parent_folder/processed_passes/processed_passes.geojson"""
         else:
             help_frame.grid_remove()
             button.configure(text="Show Help ▼")
+
+    def on_close(self):
+        """Handler for app close; make sure settings are saved."""
+        self.save_settings()
+        self.root.destroy()
+
+    def load_settings(self):
+        """Load settings from the config file and update variables."""
+        settings = load_settings()
+        if "user_data_folder" in settings and "calc_script" in settings:
+            self.main_folder.set(settings["user_data_folder"])
+            self.calc_script.set(settings["calc_script"])
+            print("Loaded data folder:", settings["user_data_folder"])
+            print("Loaded calculation script:", settings["calc_script"])
+            if self.main_folder.get() and self.calc_script.get():
+                self.notebook.select(self.run_tab)
+
+        else:
+            print("You need to fill up the two fields on the download tab to run any calculation.")
+
+    def save_settings(self):
+        """Save current settings to the config file."""
+        settings = {
+            "user_data_folder": self.main_folder.get(),
+            "calc_script": self.calc_script.get()
+        }
+        save_settings(settings)
+        print("Saved settings:", settings)
 
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""
