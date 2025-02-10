@@ -5,6 +5,7 @@ import threading
 import multiprocessing
 import queue
 import webbrowser
+import platform  # Import the platform module
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -459,6 +460,33 @@ parent_folder/processed_passes/processed_passes.geojson"""
                 self.config_folder.set(os.path.normpath(os.path.join(path, "common files", "configuration files")))
                 self.GMstyles_folder.set(os.path.normpath(os.path.join(path, "common files", "Guru Map styles")))
                 self.refresh_yaml_list()
+                # Retrieve system name and architecture using the platform module
+                os_name = platform.system()
+                architecture = platform.machine()
+                print(f"Operating System: {os_name}")
+                print(f"Architecture: {architecture}")
+                # For macOS ARM64
+                if os_name == "Darwin" and architecture in ["arm64", "aarch64"]:
+                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm"))
+                    print(calc_path)
+                    if os.path.exists(calc_path):  # Optionally check if the path exists
+                        self.calc_script.set(calc_path)
+                # For macOS x86_64
+                if os_name == "Darwin" and architecture in ["AMD64", "x86_64"]:
+                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_x86_64"))
+                    if os.path.exists(calc_path):
+                        self.calc_script.set(calc_path)
+                # For Windows ARM64
+                if os_name == "Windows" and architecture in ["arm64", "aarch64"]:
+                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_arm64.exe"))
+                    if os.path.exists(calc_path):
+                        self.calc_script.set(calc_path)
+                # For Windows x86_64
+                if os_name == "Windows" and architecture in ["AMD64", "x86_64"]:
+                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_amd64.exe"))
+                    if os.path.exists(calc_path):
+                        self.calc_script.set(calc_path)
+                print(self.calc_script.get())
 
     def open_airfield_file(self):
         """Open the airfield file with system's default application or let user choose"""
