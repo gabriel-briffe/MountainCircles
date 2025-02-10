@@ -1,0 +1,71 @@
+Before all, remember that an ash31 can do a glide ratio of less than 10 if it is in the wrong place, and that you need to be able to do some calculations in case you have to go around rain, airspace, expectable downdraft..
+
+Here you can create you own files with your own glide parameters, and your own list of fields and airfields.
+
+
+
+
+------ Config name: 
+Will be used as the name of this configuration in this program, but also as the beginning of the name of the map you will get in the end , so choose not too long. 
+
+If the name is "alps", you will get in the end:
+- aa_alps_20_100_250.geojson
+- if you dont want to have to edit several files before importing to your pocket device, choose well.
+
+
+------ Airfield file:
+coordinate notation is latitude +/- DD.ddddd, longitude +/- DDD.ddddd where DD is Degrees, from -90 to +90 for latitude and -180 to +180 for longitude. ddddd is decimals of Degrees.
+
+In the utilites tab there is a .cup to .csv converter
+
+------ Topography file:
+Point to the one in the MountainCirclesData folder that you downloaded from the download tab.
+
+If you want to work on a region that is not in that downloaded folder, you will need to copy the structure of the Alps folder, choose the name you want there. Then you need a topography file (shape of the ground). For that 2 solutions:
+- if you are lucky write to gabriel.briffe@gmail.com
+or
+- If you already know, or are brave enough to want to learn what a coordinate reference system is, what a projection is, and the different types of CRS, and the ones that prioritize area conservation vs track conservation vs distance conservation, you will need to:
+
+Download QGIS (free geospatial visualisation software)
+
+Go to https://portal.opentopography.org/raster?opentopoID=OTALOS.112016.4326.2 and download Alos World 3D 30m (AW3D30) for your region. You will get a .asc (ASCII)file with a big rectangle matrix of points, where each value is the ground elevation. The catch is that although it is called 30m, the cell size is 30m but only at the equator. Every cell is an area delimited by 2 latitudes and 2 longitudes, so not square, and we cannot use it to make any distance calculation in a time effective manner.
+We need to project that matrix to a CRS that has a small distortion of distances over the whole area.
+
+The CRS I used for the alps is a Lambert Conformal Conic with a reference longitude in the middle of the alps, and the two reference latitudes at the top and bottom 1/6 of the area. Basically a piece of cone that we can flatten and that is very close to the globe on the whole region. For thin and long regions, straight-ish, like mountain ranges, cones or cylinders seems to be good fits.
+
+Look for QGIS Custom CRS tutorials.. Choosing the right CRS is the steep part of the learning curve, after it is sowtware manipulation. 
+
+Software process will be ALOS topo in EPSG:4326 -> warp to custom CRS -> change POV to custom CRS -> select a rectangle area to export -> resample to a resolution of 100m if you want quicker calculations. Check the altitudes of known points in some valleys to make sure we have no offset. Make sure the cellsize in the header of the files is in meters, and that is it.
+
+
+
+------ CRS File:
+A .txt file with only one line containing the definition of the CRS chosen to get a square grid relative to distances. The one I choosed for the alps is:
+"+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
+Don't loose it, your topographic file would be worthless without it, because we wouldn't be able to reproject back to the CRS required by the web and smartphones map apps. (back to EPSG:4326 for Guru maps)
+
+------ Result Folder:
+You could give it the name of the config (alps_airfields_only - French alps - alps_with_outlandings - test) and place it in the ---RESULTS---/ folder. 
+When you do a run, you will get ---RESULTS---/test/20-100-250-4000/all_your_result_files
+
+------ Glide Parameters:
+- Glide ratio for the calculation
+- Height over the passes
+- Height for the landing circuit
+- Altitude above which we stop the calculation (the higher the longer)
+- the delta of altitude between two consecutive circles. (i want a circle every 100m, 50m, 200m...)
+For reference, on a modern laptop, with topography file of 100m resolution, 86 airfields for all the alps, Glide ratio 30, max altitude 4200, we need 5mn altogether.
+
+
+------ Checkboxes:
+- Wipe result folder: delete the content of ---RESULTS---/test/20-100-250-4000/ before launching a calculation
+
+- Generate Data Files for Guru Maps: will put all the results files together in ---RESULTS---/test/20-100-250-4000/ along with their style files, so that you can copy/paste everything at once to export to Guru Maps (all the individaul airfields up to max altitude, the recombined maps, the colored sectors)
+
+- Create mountain passes files: during the calcultation of every individual airfield, every time the computer detects that we have to glide above a pass to best go back from one point to the airfield, it will add that location to a .csv file. 
+The point is to be able to build later a file of "all useful passes for gliding" with their names and altitudes, 1: for us to have that information available in the air, 2: so that we filter out the miriad of passes that would be way too long to do by hand, and get usable information in our app.
+Then we can do different with different glide ratios (15-100-250-4000,20-100-250-4000,25-100-250-4000,30-100-250-4000) to catch with L/D 15 passes where at L/D 30 we wouldnt need them because we could take the long route around the mountain, and catch with L/D 30 passes that could be useful and that we wouldn't catch with L/D 15.
+Then, from the utility folder, if we specify a parent folder like ---RESULTS---/alps_w_outlandings/, the program will collect all the passes from all subfolders, and compare with a file from the public data base Open Street Maps, that have names and elevation, compare, take the public ones that are close to where our calculations told us we should find useful passes for gliders, and puts them in a file, alongside a style file, ready for export to Guru Maps.
+This way, after findind the public database for your region, we can have a whole mountain range of useful passes in tens of minutes.
+
+- Clean temporary files: will delete all files that have no immediate use for just Guru Maps exports. Raster files with the topology of each glide cone and recombined glide cones, that we used for extracting contour lines (the circles) Only the extracted passes will remain, and the raster that can be used in the utilities folder to rebuild the color sectors if you are not happy with the on that has already been generated.

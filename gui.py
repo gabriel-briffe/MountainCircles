@@ -69,6 +69,8 @@ class MountainCirclesGUI:
         self.cup_output_path = tk.StringVar(value="")
         self.process_passes_CRSfile = tk.StringVar(value="")
         self.merged_output_name = tk.StringVar(value="aa")
+        self.help_process_passes_filepath = tk.StringVar(value="")
+        self.help_run_filepath = tk.StringVar(value="")
         # Setup tabs
         self.setup_download_tab()
         self.setup_run_tab()
@@ -79,6 +81,40 @@ class MountainCirclesGUI:
 
         # Bind window close to saving settings
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def first_contact(self, path):
+        self.config_folder.set(os.path.normpath(os.path.join(path, "common files", "configuration files")))
+        self.GMstyles_folder.set(os.path.normpath(os.path.join(path, "common files", "Guru Map styles")))
+        self.help_process_passes_filepath.set(os.path.normpath(os.path.join(path,"common files","help_files","process_passes_help.txt")))
+        # self.help_run_filepath.set(os.path.normpath(os.path.join(path,"common files","help_files","run_help.txt")))
+        self.refresh_yaml_list()
+        # Retrieve system name and architecture using the platform module
+        os_name = platform.system()
+        architecture = platform.machine()
+        print(f"Operating System: {os_name}")
+        print(f"Architecture: {architecture}")
+        # For macOS ARM64
+        if os_name == "Darwin" and architecture in ["arm64", "aarch64"]:
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm"))
+            print(calc_path)
+            if os.path.exists(calc_path):  # Optionally check if the path exists
+                self.calc_script.set(calc_path)
+        # For macOS x86_64
+        if os_name == "Darwin" and architecture in ["AMD64", "x86_64"]:
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_x86_64"))
+            if os.path.exists(calc_path):
+                self.calc_script.set(calc_path)
+        # For Windows ARM64
+        if os_name == "Windows" and architecture in ["arm64", "aarch64"]:
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_arm64.exe"))
+            if os.path.exists(calc_path):
+                self.calc_script.set(calc_path)
+        # For Windows x86_64
+        if os_name == "Windows" and architecture in ["AMD64", "x86_64"]:
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_amd64.exe"))
+            if os.path.exists(calc_path):
+                self.calc_script.set(calc_path)
+        print(self.calc_script.get())
 
     def setup_download_tab(self):
         """Setup the Download tab without scroll functionality"""
@@ -196,10 +232,9 @@ class MountainCirclesGUI:
             row=2, column=1, padx=5, sticky="ew")
         airfield_buttons_frame = ttk.Frame(param_frame)
         airfield_buttons_frame.grid(row=2, column=2, sticky="w")
-        ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.browse_file(
-            "Airfield File", self.airfield_path)).grid(row=0, column=0, padx=2)
+        ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.open_file("Airfield")).grid(row=0, column=0, padx=2)
         ttk.Button(airfield_buttons_frame, text="Open/edit",
-                   command=self.open_airfield_file).grid(row=0, column=1, padx=2)
+                   command=lambda: self.open_file("Airfield")).grid(row=0, column=1, padx=2)
 
         # Topography file selection
         ttk.Label(param_frame, text="Topography File:").grid(
@@ -372,33 +407,11 @@ class MountainCirclesGUI:
         ttk.Button(process_passes_frame, text="Browse", command=lambda: self.browse_file(
             "CRS File", self.process_passes_CRSfile, [("Text files", "*.txt")])).grid(row=2, column=2)
 
-        # Help section
-        self.help_visible = False
-        help_button = ttk.Button(process_passes_frame, text="Show Help ▼",
-                                 command=lambda: self.toggle_help_section(help_button, help_frame))
-        help_button.grid(row=3, column=1, pady=(10, 0), sticky='ew')
-
-        # Help content frame (initially hidden)
-        help_frame = ttk.Frame(process_passes_frame)
-        help_frame.grid(row=4, column=0, columnspan=3, sticky='ew', padx=5)
-        help_frame.grid_remove()  # Initially hidden
-
-        help_text = """This tool processes mountain passes data in three steps:
-        
-1. Collection: Gathers and merges all CSV files containing pass data from the parent folder and all subfolders.
-2. Conversion: Converts the collected data and transforms it to the correct coordinate system.
-3. Filtering: Compares with known passes from Open Street Map database and keeps only the closest matches.
-
-Output will be saved in:
-parent_folder/processed_passes/processed_passes.geojson"""
-
-        help_label = ttk.Label(help_frame, text=help_text,
-                               justify='left', wraplength=450)
-        help_label.pack(pady=10)
-
-        # Process button
-        ttk.Button(process_passes_frame, text="Process Passes", command=self.process_passes).grid(
-            row=5, column=0, columnspan=3, pady=10)
+        # New action buttons (Open Help File and Process Passes)
+        action_frame = ttk.Frame(process_passes_frame)
+        action_frame.grid(row=3, column=0, columnspan=3, pady=10)
+        ttk.Button(action_frame, text="Open Help File", command=lambda: self.open_file("Help_Passes")).pack(side=tk.LEFT, padx=5)
+        ttk.Button(action_frame, text="Process Passes", command=self.process_passes).pack(side=tk.LEFT, padx=5)
 
         process_passes_frame.grid_columnconfigure(1, weight=1)
 
@@ -457,6 +470,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
         if path:
             var.set(path)
 
+
     def browse_directory(self, dir_type, var):
         """Browse for a directory and update the corresponding variable"""
         # Use self.main_folder as the initial directory if it is set; otherwise, use the current working directory.
@@ -468,44 +482,27 @@ parent_folder/processed_passes/processed_passes.geojson"""
             if dir_type == "Results Folder":
                 self.real_result_path.set(os.path.normpath(os.path.join(path, self.name.get())))
             if dir_type == "MountainCircles Folder":
-                self.config_folder.set(os.path.normpath(os.path.join(path, "common files", "configuration files")))
-                self.GMstyles_folder.set(os.path.normpath(os.path.join(path, "common files", "Guru Map styles")))
-                self.refresh_yaml_list()
-                # Retrieve system name and architecture using the platform module
-                os_name = platform.system()
-                architecture = platform.machine()
-                print(f"Operating System: {os_name}")
-                print(f"Architecture: {architecture}")
-                # For macOS ARM64
-                if os_name == "Darwin" and architecture in ["arm64", "aarch64"]:
-                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm"))
-                    print(calc_path)
-                    if os.path.exists(calc_path):  # Optionally check if the path exists
-                        self.calc_script.set(calc_path)
-                # For macOS x86_64
-                if os_name == "Darwin" and architecture in ["AMD64", "x86_64"]:
-                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_x86_64"))
-                    if os.path.exists(calc_path):
-                        self.calc_script.set(calc_path)
-                # For Windows ARM64
-                if os_name == "Windows" and architecture in ["arm64", "aarch64"]:
-                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_arm64.exe"))
-                    if os.path.exists(calc_path):
-                        self.calc_script.set(calc_path)
-                # For Windows x86_64
-                if os_name == "Windows" and architecture in ["AMD64", "x86_64"]:
-                    calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_amd64.exe"))
-                    if os.path.exists(calc_path):
-                        self.calc_script.set(calc_path)
-                print(self.calc_script.get())
+                self.first_contact(path)
 
-    def open_airfield_file(self):
-        """Open the airfield file with system's default application or let user choose"""
-        file_path = self.airfield_path.get()
-
-        if not file_path:
-            messagebox.showwarning(
-                "Warning", "Please select an airfield file first.")
+    def open_file(self, file_type):
+        """Open a file with the system's default application.
+        
+        file_type: A string specifying which file to open.
+                   "Airfield"   -> open the airfield file using self.airfield_path.
+                   "Help_Passes"-> open the help file using self.help_process_passes_filepath.
+        """
+        if file_type == "Airfield":
+            file_path = self.airfield_path.get()
+            if not file_path:
+                messagebox.showwarning("Warning", "Please select an airfield file first.")
+                return
+        elif file_type == "Help_Passes":
+            file_path = self.help_process_passes_filepath.get()
+            if not file_path:
+                messagebox.showwarning("Warning", "Help file is not set.")
+                return
+        else:
+            messagebox.showerror("Error", f"Unknown file type: {file_type}")
             return
 
         if not os.path.exists(file_path):
@@ -514,10 +511,8 @@ parent_folder/processed_passes/processed_passes.geojson"""
 
         try:
             if sys.platform == 'darwin':  # macOS
-                # You can change TextEdit to your preferred editor
                 subprocess.run(['open', '-a', 'TextEdit', file_path])
             elif sys.platform == 'win32':  # Windows
-                # This will open with the default application
                 os.startfile(file_path)
             else:  # Linux
                 subprocess.run(['xdg-open', file_path])
@@ -1020,16 +1015,6 @@ parent_folder/processed_passes/processed_passes.geojson"""
             sys.stdout = original_stdout
             sys.stderr = original_stderr
 
-    def toggle_help_section(self, button, help_frame):
-        """Toggle the visibility of the help section"""
-        self.help_visible = not self.help_visible
-        if self.help_visible:
-            help_frame.grid()
-            button.configure(text="Hide Help ▲")
-        else:
-            help_frame.grid_remove()
-            button.configure(text="Show Help ▼")
-
     def on_close(self):
         """Handler for app close; make sure settings are saved."""
         self.save_settings()
@@ -1045,6 +1030,7 @@ parent_folder/processed_passes/processed_passes.geojson"""
             print("Loaded calculation script:", settings["calc_script"])
             if self.main_folder.get() and self.calc_script.get():
                 self.notebook.select(self.run_tab)
+            self.first_contact(self.main_folder.get())
 
         else:
             print("You need to fill up the two fields on the download tab to run any calculation.")

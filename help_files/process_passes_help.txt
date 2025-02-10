@@ -1,0 +1,18 @@
+Read the help file on the run tab first.
+
+This tool processes mountain passes data in three steps:
+        
+1. Collection: Gathers and merges all CSV files containing pass data from the parent folder and all subfolders.
+2. Conversion: Converts the collected data and transforms it to the correct coordinate system.
+3. Filtering: Compares with known passes from Open Street Map database and keeps only the closest matches.
+
+Parent folder is the folder from which the computer will look for all "mountain_passes.csv" in every child and subsequent folder.
+"Reference passes" is the file from the public database Open Street Maps. For the alps it is in the downloaded folder.
+Otherwise depending on the size of the region you are intersted into, look for OSM data download on the web.
+Geofabric allows big downloads but you have to extract the info and create a .geojson file with only the passes.
+https://www.geofabrik.de/data/download.html
+Overpass turbo, smaller chunks, direct to geojsn but you need to recombine your chunks if you want to treat a big area.
+https://overpass-turbo.eu/
+
+Output will be saved in:
+parent_folder/processed_passes/processed_passes.geojson

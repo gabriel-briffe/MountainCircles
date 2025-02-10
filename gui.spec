@@ -41,4 +41,5 @@ exe = EXE(
     strip=False,
     upx=True,
     console=True,  # Set to False to avoid a console for a GUI app.
+    icon = 'ressources/icon.icns'
 )
