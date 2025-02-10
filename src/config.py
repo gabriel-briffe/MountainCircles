@@ -58,7 +58,10 @@ class Config:
         self.sectors2_filepath = os.path.normpath(os.path.join(self.calculation_folder_path, self.sectors2_filename)) #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250_sectors2.geojson 
         self.sectors1_style_filepath = os.path.normpath(os.path.join(self.calculation_folder_path, self.sectors1_style_filename)) #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250_sectors1.mapcss  
         self.sectors2_style_filepath = os.path.normpath(os.path.join(self.calculation_folder_path, self.sectors2_style_filename)) #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250_sectors2.mapcss      
-        
+        style_folder=os.path.dirname(self.mapcssTemplate)
+        self.sector1_style_path=os.path.normpath(os.path.join(style_folder, f"sectors1.mapcss"))
+        self.sector2_style_path=os.path.normpath(os.path.join(style_folder, f"sectors2.mapcss"))
+        self.sectors1_style_filepath = os.path.normpath(os.path.join(self.calculation_folder_path, self.sectors1_style_filename)) #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250_sectors1.mapcss  
         self.calculate_boundaries()
 
 

@@ -194,6 +194,18 @@ def main(config, buffer_distance, number_of_colors, simplify_tolerance, output_q
     shutil.copy(config.sectors1_filepath, config.sectors2_filepath)
     log_output(f"Sectors saved to {config.sectors2_filepath}", output_queue)
 
+        # copy config.sector1_style_path and config.sector2_style_path to sectors1_style_filepath and sectors2_style_filepath
+    if config.gurumaps:    
+        shutil.copy(config.sector1_style_path, config.sectors1_style_filepath)
+        shutil.copy(config.sector2_style_path, config.sectors2_style_filepath)
+        log_output(f"Sectors style files saved to {config.sectors1_style_filepath} and {config.sectors2_style_filepath}", output_queue)
+
+    #move sectors.asc to sector_raster/config.sectors_name.asc
+    sectors_raster_folder = os.path.join(config.calculation_folder_path, "sector_raster")
+    if not os.path.exists(sectors_raster_folder):
+        os.makedirs(sectors_raster_folder)
+    shutil.move(config.sectors_filepath, os.path.join(sectors_raster_folder, config.sectors_filename))
+    log_output(f"Sectors raster moved to {os.path.join(sectors_raster_folder, config.sectors_filename)}", output_queue)
 
 
 if __name__ == "__main__":
