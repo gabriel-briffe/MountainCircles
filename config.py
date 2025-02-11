@@ -3,7 +3,7 @@ import json
 
 CONFIG_FILE = os.path.normpath(os.path.join(os.path.expanduser("~"), ".mountaincircles.json"))
 
-def load_settings():
+def cload_settings():
     """
     Loads settings from a JSON config file.
     Returns a dictionary with the settings or an empty dict if the file doesn't exist.
@@ -16,7 +16,7 @@ def load_settings():
             print("Could not load settings:", e)
     return {}
 
-def save_settings(settings):
+def csave_settings(settings):
     """
     Saves the given settings (a dictionary) to the JSON config file.
     """
