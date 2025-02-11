@@ -111,7 +111,7 @@ class MountainCirclesGUI:
         # Retrieve system name and architecture using the platform module
         # For macOS ARM64
         if self.os_name == "Darwin" and self.architecture in ["arm64", "aarch64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm"))
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm64"))
             if os.path.exists(calc_path):  # Optionally check if the path exists
                 self.calc_script.set(calc_path)
         # For macOS x86_64
@@ -126,7 +126,7 @@ class MountainCirclesGUI:
                 self.calc_script.set(calc_path)
         # For Windows x86_64
         if self.os_name == "Windows" and self.architecture in ["AMD64", "x86_64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_amd64.exe"))
+            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_AMD64.exe"))
             if os.path.exists(calc_path):
                 self.calc_script.set(calc_path)
         if self.calc_script.get():# and not "calc_script" in load_settings():
