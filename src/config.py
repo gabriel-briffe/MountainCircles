@@ -6,6 +6,17 @@ import yaml
 def load_config(filename):
     with open(filename, 'r') as file:
         return yaml.safe_load(file)
+    
+def clean(path):
+    try:
+        # Check if the directory exists before attempting to remove it
+        if os.path.exists(path):
+            # Remove the directory and all its contents
+            shutil.rmtree(path)
+            print(f"deleted {path}")
+    except Exception as e:
+        print(f"An error occurred while trying to delete the directory {path}: {e}")
+
 
 class Config:
     def __init__(self, config_file):
@@ -32,7 +43,8 @@ class Config:
 
         self.gurumaps = config["gurumaps"]
         self.exportPasses = config["exportPasses"]
-        self.reset_results = self.clean(config["reset_results"])
+        self.reset_results = config["reset_results"]
+        if self.reset_results: clean(self.result_folder_path)
         self.clean_temporary_files = config.get("clean_temporary_files", False)  # Default to False if not specified
 
         self.merged_output_name = config["merged_output_name"] #aa
@@ -40,6 +52,7 @@ class Config:
         combined_name = f"{self.merged_output_name}_{self.name}" #aa_alps
         self.calculation_name = f"{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}-{self.max_altitude}" #20-100-250_4200
         self.calculation_folder_path = self.create_calculation_folder() #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200
+        clean(self.calculation_folder_path)
         self.calculation_name_short = f"{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}" #20-100-250   
         self.merged_output_name = f"{combined_name}_{self.calculation_name_short}" #aa_alps_20-100-250
         self.merged_output_raster_path = os.path.normpath(os.path.join(self.calculation_folder_path,f'{self.merged_output_name}.asc')) #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250.asc
@@ -104,17 +117,6 @@ class Config:
             os.makedirs(dir_path)
         return dir_path
 
-    def clean(self, reset):
-        if reset:
-            try:
-                # Check if the directory exists before attempting to remove it
-                if os.path.exists(self.result_folder_path):
-                    # Remove the directory and all its contents
-                    shutil.rmtree(self.result_folder_path)
-                    print(f"deleted {self.result_folder_path}")
-            except Exception as e:
-                print(f"An error occurred while trying to delete the directory {self.result_folder_path}: {e}")
-        return reset
     
     def print(self):
         print(f"airfields: {self.airfield_file_path}")

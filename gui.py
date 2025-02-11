@@ -12,7 +12,7 @@ from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import yaml
 
-from config import cload_settings, csave_settings
+from src.settings import cload_settings, csave_settings
 from utils.cupConvert import convert_coord
 import launch
 
@@ -41,6 +41,7 @@ class MountainCirclesGUI:
         # Variable to store the user's personal data folder
         self.main_folder = tk.StringVar(value="")
         self.calc_script = tk.StringVar(value="")
+        self.config_folder_path = ""
 
         print("-------welcome here---------")
         self.os_name=platform.system()
@@ -81,7 +82,6 @@ class MountainCirclesGUI:
 
 
         self.input_crs = ""
-        self.config_folder_path = ""
         self.GMstyles_folder_path = ""
         self.result_config_path = ""
         self.ref_mountain_passes_path = tk.StringVar(value="")
@@ -131,7 +131,7 @@ class MountainCirclesGUI:
                 self.calc_script.set(calc_path)
         if self.calc_script.get():# and not "calc_script" in load_settings():
             self.save_settings()
-            print(f"thank you, calculation script loaded: {self.calc_script.get()}")
+            # print(f"thank you, calculation script loaded: {self.calc_script.get()}")
 
     def setup_download_tab(self):
         """Setup the Download tab without scroll functionality"""
@@ -610,9 +610,11 @@ class MountainCirclesGUI:
 
             self.gurumaps.set(config.get('gurumaps', True))
             self.export_passes.set(config.get('exportPasses', False))
-            self.reset_results.set(config.get('reset_results', True))
+            self.reset_results.set(config.get('reset_results', False))
             self.clean_temporary_files.set(
-                config.get('clean_temporary_files', True))
+                config.get('clean_temporary_files', False))
+            
+            self.save_settings()
 
         except Exception as e:
             messagebox.showerror(
@@ -1054,13 +1056,13 @@ class MountainCirclesGUI:
     def load_settings(self):
         """Load settings from the config file and update variables."""
         settings = cload_settings()
-        print(settings)
+        # print(settings)
         if "user_data_folder" in settings and "calc_script" in settings:
             self.main_folder.set(settings["user_data_folder"])
             self.calc_script.set(settings["calc_script"])
             if self.main_folder.get():
                 print("Loaded data folder:", settings["user_data_folder"])
-                print("Loaded calculation script:", settings["calc_script"])
+                print("Loaded calculation script:", os.path.basename(settings["calc_script"]))
             if self.main_folder.get() and self.calc_script.get():
                 self.notebook.select(self.run_tab)
             self.first_contact(self.main_folder.get())
@@ -1069,10 +1071,11 @@ class MountainCirclesGUI:
         """Save current settings to the config file."""
         settings = {
             "user_data_folder": self.main_folder.get(),
-            "calc_script": self.calc_script.get()
+            "calc_script": self.calc_script.get(),
+            "config": self.config_folder_path
         }
         csave_settings(settings)
-        print("Saved settings:", settings)
+        # print("Saved settings", settings)
 
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""
