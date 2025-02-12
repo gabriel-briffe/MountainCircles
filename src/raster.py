@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from src.shortcuts import normJoin
 from src.postprocess import postProcess
 from src.logging import log_output
 
@@ -80,7 +81,7 @@ def merge_output_rasters(config, output_filename, sectors_filename, output_queue
     for root, _, files in os.walk(config.calculation_folder_path):
         for file in files:
             if file == 'output_sub.asc':
-                path = os.path.normpath(os.path.join(root, file))
+                path = normJoin(root, file)
                 with open(path, 'r') as file:
                     ncols = int(next(file).split()[1])
                     nrows = int(next(file).split()[1])

@@ -1,7 +1,9 @@
 import os
 import json
 
-CONFIG_FILE = os.path.normpath(os.path.join(os.path.expanduser("~"), ".mountaincircles.json"))
+from src.shortcuts import normJoin
+
+CONFIG_FILE = normJoin(os.path.expanduser("~"), ".mountaincircles.json")
 
 def cload_settings():
     """

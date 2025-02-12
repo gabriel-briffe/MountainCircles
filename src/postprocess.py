@@ -6,6 +6,7 @@ import skimage.measure
 from shapely.geometry import LineString, shape, mapping
 import pyproj
 from geojson import Feature, FeatureCollection, LineString as GeoJSONLineString
+from src.shortcuts import normJoin
 from src.logging import log_output
 
 
@@ -72,8 +73,8 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
         # Create FeatureCollection
         feature_collection = FeatureCollection(features)
 
-        geojson_path = os.path.normpath(os.path.join(
-            inThisFolder, f'{contourFileName}_customCRS.geojson'))
+        geojson_path = normJoin(
+            inThisFolder, f'{contourFileName}_customCRS.geojson')
 
         # Write to GeoJSON file
         with open(geojson_path, 'w') as f:
@@ -92,8 +93,8 @@ def create4326geosonContours(inThisFolder, config, contourFileName, output_queue
     """
     try:
         # Input GeoJSON path (from your custom CRS GeoJSON)
-        input_geojson_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_customCRS.geojson'))
-        output_geojson_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_noAirfields.geojson'))
+        input_geojson_path = normJoin(inThisFolder, f'{contourFileName}_customCRS.geojson')
+        output_geojson_path = normJoin(inThisFolder, f'{contourFileName}_noAirfields.geojson')
 
         # Read the input GeoJSON
         with open(input_geojson_path, 'r') as f:
@@ -144,9 +145,9 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
     This function assumes that you want to merge all features from both GeoJSON files.
     """
     try:
-        geojson_airfields_path = os.path.normpath(os.path.join(config.result_folder_path, "airfields", f"{config.name}.geojson"))
-        geojson_contour_path = os.path.normpath(os.path.join(inThisFolder, f'{contourFileName}_noAirfields.geojson'))
-        merged_geojson_path = os.path.normpath(os.path.join(toThatFolder, f'{contourFileName}.geojson'))
+        geojson_airfields_path = normJoin(config.result_folder_path, "airfields", f"{config.name}.geojson")
+        geojson_contour_path = normJoin(inThisFolder, f'{contourFileName}_noAirfields.geojson')
+        merged_geojson_path = normJoin(toThatFolder, f'{contourFileName}.geojson')
 
         # Read GeoJSON files
         with open(geojson_airfields_path, 'r') as f:
@@ -166,7 +167,7 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
         for feature in merged_features:
             if feature.get("geometry", {}).get("type") == "Point":
                 name = feature.get("properties", {}).get("name", "unknown")
-                feature["properties"]["filepath"] = os.path.normpath(os.path.join(config.calculation_folder_path,f"{name}.geojson"))
+                feature["properties"]["filepath"] = normJoin(config.calculation_folder_path,f"{name}.geojson")
 
         # Create the merged GeoJSON
         merged_geojson = {
@@ -193,7 +194,7 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
 def copyMapCss(toThatFolder, config, contourFileName, extension, output_queue=None):
     try:
         # copy mapcss for gurumaps export
-        mapcss_file = os.path.normpath(os.path.join(toThatFolder, f'{contourFileName}{extension}.mapcss'))
+        mapcss_file = normJoin(toThatFolder, f'{contourFileName}{extension}.mapcss')
         shutil.copy2(config.mapcssTemplate, mapcss_file)
         log_output(
             f"{contourFileName}: Guru Map style copied successfully", output_queue)

@@ -4,6 +4,8 @@ import json
 from typing import List
 from pyproj import Transformer
 
+from src.shortcuts import normJoin
+
 
 class Airfield:
     def __init__(self, parts):
@@ -48,8 +50,8 @@ def convert_airfields(airfields4326,CRS):
 def csv_to_geojson(config):
     # Extract base filename without extension
     base_filename = config.name
-    output_dir = os.path.normpath(os.path.join(config.result_folder_path, 'airfields'))
-    geojson_file_path = os.path.normpath(os.path.join(output_dir, f"{base_filename}.geojson"))
+    output_dir = normJoin(config.result_folder_path, 'airfields')
+    geojson_file_path = normJoin(output_dir, f"{base_filename}.geojson")
 
     # Ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)

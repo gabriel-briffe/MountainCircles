@@ -9,6 +9,7 @@ import http.server
 import socketserver
 import shutil
 import functools
+from src.shortcuts import normJoin
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -107,30 +108,30 @@ class MountainCirclesGUI:
 
 
     def first_contact(self, path):
-        self.config_folder_path = os.path.normpath(os.path.join(path, "common files", "configuration files"))
-        self.GMstyles_folder_path = os.path.normpath(os.path.join(path, "common files", "Guru Map styles"))
-        self.help_process_passes_filepath = os.path.normpath(os.path.join(path,"common files","help_files","process_passes_help.txt"))
-        self.help_run_filepath = os.path.normpath(os.path.join(path,"common files","help_files","run_help.txt"))
+        self.config_folder_path = normJoin(path, "common files", "configuration files")
+        self.GMstyles_folder_path = normJoin(path, "common files", "Guru Map styles")
+        self.help_process_passes_filepath = normJoin(path,"common files","help_files","process_passes_help.txt")
+        self.help_run_filepath = normJoin(path,"common files","help_files","run_help.txt")
         self.refresh_yaml_list()
         # Retrieve system name and architecture using the platform module
         # For macOS ARM64
         if self.os_name == "Darwin" and self.architecture in ["arm64", "aarch64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_arm64"))
+            calc_path = normJoin(path, "common files", "calculation script", "compute_mac_arm64")
             if os.path.exists(calc_path):  # Optionally check if the path exists
                 self.calc_script.set(calc_path)
         # For macOS x86_64
         if self.os_name == "Darwin" and self.architecture in ["AMD64", "x86_64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_mac_x86_64"))
+            calc_path = normJoin(path, "common files", "calculation script", "compute_mac_x86_64")
             if os.path.exists(calc_path):
                 self.calc_script.set(calc_path)
         # For Windows ARM64
         if self.os_name == "Windows" and self.architecture in ["arm64", "aarch64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_arm64.exe"))
+            calc_path = normJoin(path, "common files", "calculation script", "compute_windows_arm64.exe")
             if os.path.exists(calc_path):
                 self.calc_script.set(calc_path)
         # For Windows x86_64
         if self.os_name == "Windows" and self.architecture in ["AMD64", "x86_64"]:
-            calc_path = os.path.normpath(os.path.join(path, "common files", "calculation script", "compute_windows_AMD64.exe"))
+            calc_path = normJoin(path, "common files", "calculation script", "compute_windows_AMD64.exe")
             if os.path.exists(calc_path):
                 self.calc_script.set(calc_path)
         if self.calc_script.get():# and not "calc_script" in load_settings():
@@ -463,8 +464,8 @@ class MountainCirclesGUI:
         if initialdir is None:
             initialdir = self.main_folder.get()
         if file_type == "Calculation script":
-            if os.path.exists(os.path.normpath(os.path.join(self.main_folder.get(), "common files", "calculation script"))):
-                initialdir = os.path.normpath(os.path.join(initialdir, "common files", "calculation script"))
+            if os.path.exists(normJoin(self.main_folder.get(), "common files", "calculation script")):
+                initialdir = normJoin(initialdir, "common files", "calculation script")
 
         if filetypes is None:
             filetypes = [("All files", "*.*")]
@@ -485,7 +486,7 @@ class MountainCirclesGUI:
                         directory) if f.lower().endswith('.txt')])
                     if txt_files:
                         # Assign the first .txt file to self.topo_CRSfile_path
-                        self.topo_CRSfile_path.set(os.path.normpath(os.path.join(directory, txt_files[0])))
+                        self.topo_CRSfile_path.set(normJoin(directory, txt_files[0]))
                         print(
                             f"Automatically detected CRS file: {self.topo_CRSfile_path.get()}")
                 except Exception as e:
@@ -514,7 +515,7 @@ class MountainCirclesGUI:
         if path:
             var.set(path)
             if dir_type == "Results Folder":
-                self.result_config_path = os.path.normpath(os.path.join(path, self.name.get()))
+                self.result_config_path = normJoin(path, self.name.get())
             if dir_type == "MountainCircles Folder":
                 self.first_contact(path)
 
@@ -586,7 +587,7 @@ class MountainCirclesGUI:
             return
 
         # Construct the full path to the selected YAML file
-        full_path = os.path.normpath(os.path.join(self.config_folder_path, selected))
+        full_path = normJoin(self.config_folder_path, selected)
 
         try:
             with open(full_path, 'r') as f:
@@ -637,8 +638,8 @@ class MountainCirclesGUI:
             config = self.create_config_dict()
 
             # Create filename from config name
-            filename = os.path.normpath(os.path.join(
-                self.config_folder_path, f"{self.name.get()}.yaml"))
+            filename = normJoin(
+                self.config_folder_path, f"{self.name.get()}.yaml")
 
             # Check if file exists
             if os.path.exists(filename):
@@ -725,8 +726,8 @@ class MountainCirclesGUI:
                 ("CRS_file", self.topo_CRSfile_path.get()),
                 ("result_folder", self.result_path.get()),
                 ("compute", self.calc_script.get()),
-                ("mapcssTemplate", os.path.normpath(os.path.join(
-                    self.GMstyles_folder_path, "circlesAndAirfields.mapcss")))
+                ("mapcssTemplate", normJoin(
+                    self.GMstyles_folder_path, "circlesAndAirfields.mapcss"))
             ])),
 
             ("CRS", OrderedDict([
@@ -804,8 +805,8 @@ class MountainCirclesGUI:
             config = self.create_config_dict()
 
             # Create temporary config file
-            temp_config_path = os.path.normpath(os.path.join(
-                self.config_folder_path, "temp_config.yaml"))
+            temp_config_path = normJoin(
+                self.config_folder_path, "temp_config.yaml")
 
             with open(temp_config_path, 'w') as f:
                 # Write the config in the same format as save_config
@@ -924,8 +925,8 @@ class MountainCirclesGUI:
         # Launch the map server and open the browser to map.html
         calc_name=f"{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}-{self.max_altitude.get()}"
         merge_name = f"{self.merged_output_name}_{self.name.get()}_{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}.geojson"
-        self.calculation_result_folder = os.path.normpath(os.path.join(self.result_path.get(),calc_name))
-        self.merged_layer_path = os.path.normpath(os.path.join(self.calculation_result_folder,merge_name))
+        self.calculation_result_folder = normJoin(self.result_path.get(),calc_name)
+        self.merged_layer_path = normJoin(self.calculation_result_folder,merge_name)
         print(f"on essaie d'ouvrir: {self.merged_layer_path}")
         self.launch_map_server()
 
@@ -964,8 +965,8 @@ class MountainCirclesGUI:
 
         # Locate the original map.html using an absolute path (relative to the script)
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        orig_map_path = os.path.normpath(os.path.join(script_dir, "map.html"))
-        dest_map_path = os.path.normpath(os.path.join(self.calculation_result_folder, "temp_map.html"))
+        orig_map_path = normJoin(script_dir, "map.html")
+        dest_map_path = normJoin(self.calculation_result_folder, "temp_map.html")
 
         # Get the merged layer path from your processing.
         # This should have been set during processing.
@@ -978,7 +979,7 @@ class MountainCirclesGUI:
         # If merged_layer_path is absolute, copy it into the result folder and use its basename.
         if os.path.isabs(merged_layer_path):
             geojson_filename = os.path.basename(merged_layer_path)
-            dest_geojson_path = os.path.normpath(os.path.join(self.calculation_result_folder, geojson_filename))
+            dest_geojson_path = normJoin(self.calculation_result_folder, geojson_filename)
             if not os.path.exists(dest_geojson_path):
                 try:
                     shutil.copy2(merged_layer_path, dest_geojson_path)
@@ -1109,12 +1110,12 @@ class MountainCirclesGUI:
             return
 
         # Create output directory in the parent folder
-        output_dir = os.path.normpath(os.path.join(root_folder, "processed_passes"))
+        output_dir = normJoin(root_folder, "processed_passes")
         os.makedirs(output_dir, exist_ok=True)
 
         # Set intermediate and output file paths
-        intermediate_path = os.path.normpath(os.path.join(output_dir, "intermediate_passes.geojson"))
-        output_path = os.path.normpath(os.path.join(output_dir, "processed_passes.geojson"))
+        intermediate_path = normJoin(output_dir, "intermediate_passes.geojson")
+        output_path = normJoin(output_dir, "processed_passes.geojson")
 
         # Run passes processing in a separate thread so the UI remains responsive.
         thread = threading.Thread(
@@ -1214,7 +1215,7 @@ if __name__ == "__main__":
             multiprocessing.set_executable(sys.executable)
         except Exception as e:
             # Log the exception to a file (since using --noconsole means you won't see it)
-            with open(os.path.normpath(os.path.join(os.getcwd(), "error.log")), "w") as error_file:
+            with open(normJoin(os.getcwd(), "error.log"), "w") as error_file:
                 traceback.print_exc(file=error_file)
 
     main()
