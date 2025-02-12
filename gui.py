@@ -80,7 +80,7 @@ class MountainCirclesGUI:
         self.circuit_height = tk.StringVar(value="")
         self.max_altitude = tk.StringVar(value="")
         self.contour_height = tk.StringVar(value="")
-        self.reset_results = tk.BooleanVar(value=False)
+        self.delete_previous_calculation = tk.BooleanVar(value=False)
         self.gurumaps = tk.BooleanVar(value=False)
         self.export_passes = tk.BooleanVar(value=False)
         self.clean_temporary_files = tk.BooleanVar(value=False)
@@ -321,8 +321,8 @@ class MountainCirclesGUI:
                   width=10).grid(row=12, column=1, sticky="w", padx=5)
 
         # Checkboxes
-        ttk.Checkbutton(param_frame, text="Wipe result folder (when testing)",
-                        variable=self.reset_results).grid(row=13, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Erase previous calculation (if any)",
+                        variable=self.delete_previous_calculation).grid(row=13, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Generate data files for Guru Maps",
                         variable=self.gurumaps).grid(row=14, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Create mountain passes files",
@@ -615,7 +615,7 @@ class MountainCirclesGUI:
 
             self.gurumaps.set(config.get('gurumaps', True))
             self.export_passes.set(config.get('exportPasses', False))
-            self.reset_results.set(config.get('reset_results', False))
+            self.delete_previous_calculation.set(config.get('reset_results', False))
             self.clean_temporary_files.set(
                 config.get('clean_temporary_files', False))
             
@@ -751,7 +751,7 @@ class MountainCirclesGUI:
 
             ("gurumaps", self.gurumaps.get()),
             ("exportPasses", self.export_passes.get()),
-            ("reset_results", self.reset_results.get()),
+            ("reset_results", self.delete_previous_calculation.get()),
             ("clean_temporary_files", self.clean_temporary_files.get()),
 
             ("merged_output_name", self.merged_output_name)

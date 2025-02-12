@@ -45,8 +45,7 @@ class Config:
 
         self.gurumaps = config["gurumaps"]
         self.exportPasses = config["exportPasses"]
-        self.reset_results = config["reset_results"]
-        if self.reset_results: clean(self.result_folder_path)
+        self.delete_previous_calculation = config["reset_results"]
         self.clean_temporary_files = config.get("clean_temporary_files", False)  # Default to False if not specified
 
         self.merged_output_name = config["merged_output_name"] #aa
@@ -54,7 +53,7 @@ class Config:
         combined_name = f"{self.merged_output_name}_{self.name}" #aa_alps
         self.calculation_name = f"{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}-{self.max_altitude}" #20-100-250_4200
         self.calculation_folder_path = self.create_calculation_folder() #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200
-        clean(self.calculation_folder_path)
+        if self.delete_previous_calculation: clean(self.calculation_folder_path)
         self.calculation_name_short = f"{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}" #20-100-250   
         self.merged_output_name = f"{combined_name}_{self.calculation_name_short}" #aa_alps_20-100-250
         self.merged_output_raster_path = normJoin(self.calculation_folder_path,f'{self.merged_output_name}.asc') #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250.asc

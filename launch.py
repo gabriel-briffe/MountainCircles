@@ -31,9 +31,11 @@ def make_individuals(airfield, config, output_queue=None):
 
         # Check if the output file already exists, if so, skip processing
         ASCfile = normJoin(airfield_folder, 'local.asc')
+        log_output(f"ascII file : {ASCfile}", output_queue)
         if os.path.exists(ASCfile):
             log_output(
                 f"Output file already exists for {airfield.name}, skipping this airfield.", output_queue)
+            log_output(f"Checking ASCfile path: {ASCfile}", output_queue)
             return
 
         # Ensure the computation executable exists
