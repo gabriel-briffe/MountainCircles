@@ -5,6 +5,9 @@ import threading
 import multiprocessing
 import webbrowser
 import platform
+import http.server
+import socketserver
+import shutil
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -249,7 +252,7 @@ class MountainCirclesGUI:
             row=2, column=1, padx=5, sticky="ew")
         airfield_buttons_frame = ttk.Frame(param_frame)
         airfield_buttons_frame.grid(row=2, column=2, sticky="w")
-        ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.open_file("Airfield")).grid(row=0, column=0, padx=2)
+        ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.browse_file("Airfield", self.airfield_path)).grid(row=0, column=0, padx=2)
         ttk.Button(airfield_buttons_frame, text="Open/edit",
                    command=lambda: self.open_file("Airfield")).grid(row=0, column=1, padx=2)
 
@@ -917,6 +920,90 @@ class MountainCirclesGUI:
         """Called when processing is complete"""
         self.run_button.state(['!disabled'])
         messagebox.showinfo("Success", "Processing completed successfully!")
+        # Launch the map server and open the browser to map.html
+        calc_name=f"{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}-{self.max_altitude.get()}"
+        merge_name = f"{self.merged_output_name}_{self.name.get()}_{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}.geojson"
+        self.calculation_result_folder = os.path.normpath(os.path.join(self.result_path.get(),calc_name))
+        self.merged_layer_path = os.path.normpath(os.path.join(self.calculation_result_folder,merge_name))
+        print(f"on essaie d'ouvrir: {self.merged_layer_path}")
+        self.launch_map_server()
+
+    def launch_map_server(self):
+        """Launch a simple HTTP server to serve the result folder (which now contains an updated map.html)
+        so that you can access all the files in that folder."""
+        import http.server
+        import socketserver
+        import threading
+        import os
+        import webbrowser
+        import shutil
+        from tkinter import messagebox
+
+        port = 8000
+
+        # Get the result folder from your configuration (make sure it is set)
+        if not os.path.exists(self.calculation_result_folder):
+            messagebox.showerror("Error from launch_map_server()", "Calculation result folder does not exist.")
+            return
+
+        # Define paths for the original map.html and the destination copy.
+        orig_map_path = os.path.abspath("map.html")
+        dest_map_path = os.path.join(self.calculation_result_folder, "temp_map.html")
+
+        # Get the merged layer path as set by your processing.
+        merged_layer_path = getattr(self, 'merged_layer_path', "nameToReplace")
+        if merged_layer_path == "nameToReplace":
+            print("Warning: self.merged_layer_path is not set. Using default placeholder.")
+
+        # The merged_layer_path (or any other file paths in your map.html) must be relative
+        # to the result folder so that the HTTP server can serve them.
+        # If merged_layer_path is an absolute path and the file is already in the result folder,
+        # you could just use its basename.
+        if os.path.isabs(merged_layer_path):
+            geojson_filename = os.path.basename(merged_layer_path)
+            # Optionally, copy the file into the result folder if it isn't there already.
+            dest_geojson_path = os.path.normpath(os.path.join(self.calculation_result_folder, geojson_filename))
+            if not os.path.exists(dest_geojson_path):
+                try:
+                    shutil.copy2(merged_layer_path, dest_geojson_path)
+                    print(f"Copied geojson file to: {dest_geojson_path}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to copy geojson file: {str(e)}")
+                    return
+            merged_layer_path = geojson_filename
+
+        # Open the original map.html and replace the placeholder with the (now relative) merged layer path.
+        try:
+            with open(orig_map_path, 'r') as f:
+                content = f.read()
+            modified_content = content.replace("nameToReplace", merged_layer_path)
+            with open(dest_map_path, 'w') as f:
+                f.write(modified_content)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to update map.html: {str(e)}")
+            return
+
+        # Change the current working directory to the result folder so that the HTTP server serves all its files.
+        os.chdir(self.calculation_result_folder)
+        print(f"Changed working directory to {self.calculation_result_folder}")
+
+        handler = http.server.SimpleHTTPRequestHandler
+        try:
+            httpd = socketserver.TCPServer(("", port), handler)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to launch server: {str(e)}")
+            return
+
+        def serve():
+            print(f"Serving HTTP on localhost port {port} from {self.calculation_result_folder}")
+            httpd.serve_forever()
+
+        server_thread = threading.Thread(target=serve)
+        server_thread.daemon = True
+        server_thread.start()
+
+        # Open the copied map file in the browser.
+        webbrowser.open(f"http://localhost:{port}/temp_map.html")
 
     def processing_error(self, error_message):
         """Called when processing encounters an error"""

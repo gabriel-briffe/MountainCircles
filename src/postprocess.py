@@ -160,8 +160,13 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
             raise ValueError("Input files must be of type FeatureCollection")
 
         # Merge the features
-        merged_features = data_airfields.get(
-            "features", []) + data_contour.get("features", [])
+        merged_features = data_airfields.get("features", []) + data_contour.get("features", [])
+        
+        # Add 'filepath' property to each point feature based on its "name" property
+        for feature in merged_features:
+            if feature.get("geometry", {}).get("type") == "Point":
+                name = feature.get("properties", {}).get("name", "unknown")
+                feature["properties"]["filepath"] = os.path.normpath(os.path.join(config.calculation_folder_path,f"{name}.geojson"))
 
         # Create the merged GeoJSON
         merged_geojson = {
