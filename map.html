@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Map with Labels</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css" />
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .label {
+            font-size: 11pt;
+            color: black;
+            text-align: center;
+            white-space: nowrap;
+            transform-origin: center;
+            text-shadow:
+                -1px -1px 0 white,
+                1px -1px 0 white,
+                -1px 1px 0 white,
+                1px 1px 0 white;
+        }
+            .leaflet-tooltip {
+            background: transparent; /* Make tooltip background transparent */
+            border: none; /* Remove tooltip border */
+            box-shadow: none; /* Remove tooltip shadow */
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        var map = L.map('map').setView([45.5655427, 6.386334], 13);
+
+        L.tileLayer('http://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}').addTo(map);
+
+        var geojsonLayer;
+        var labelTooltips = []; // Store tooltip instances
+
+        // Haversine formula for more accurate distance in meters
+        function haversine(lon1, lat1, lon2, lat2) {
+            const R = 6371000; // Earth radius in meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.asin(Math.sqrt(a));
+            return R * c;
+        }
+
+        // Function to determine if a line is long enough for labeling (in meters, then to pixels)
+        function lineLengthInPixels(coords, zoom) {
+            let totalLengthMeters = 0;
+            for (let i = 0; i < coords.length - 1; i++) {
+                totalLengthMeters += haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
+            }
+
+            // Get the latitude in radians
+            let lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
+
+            // Calculate pixels per meter
+            let resolution = Math.cos(lat_rad) * 2 * Math.PI * 6378137 / (256 * Math.pow(2, zoom));
+            let pixelsPerMeter = 1 / resolution;
+
+            // Convert total length to pixels
+            let totalLengthPixels = totalLengthMeters * pixelsPerMeter;
+
+            return totalLengthPixels;
+        }
+
+        function angleBetween(p1, p2) {
+            // """Calculates the angle between two points in degrees using Haversine."""
+            const lon1 = p1[0], lat1 = p1[1];
+            const lon2 = p2[0], lat2 = p2[1];
+
+            // Calculate distances in meters
+            const y = haversine(lon1, lat2, lon1, lat1);  // North-south distance
+            const x = haversine(lon2, lat1, lon1, lat1);  // East-west distance
+
+            let angle = Math.atan2(y, x);
+            if ((lon1>lon2 && lat1>lat2) || (lon1<lon2 && lat1<lat2)) angle=-angle
+            return angle * 180 / Math.PI;
+        }
+
+        function updateLabels() {
+            var currentZoom = map.getZoom();
+
+            // Remove existing tooltips
+            labelTooltips.forEach(function(tooltip) {
+                tooltip.removeFrom(map);
+            });
+            labelTooltips = []; // Clear the array
+
+            if (currentZoom > 10) {
+                // Add tooltips if zoom level is greater than 11
+                geojsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.geometry.type === 'LineString' && layer.feature.properties.ELEV) {
+                        var coords = layer.feature.geometry.coordinates;
+                        var elev = layer.feature.properties.ELEV;
+
+                        // Calculate line length in pixels
+                        var lineLengthPx = lineLengthInPixels(coords, currentZoom);
+
+                        if (lineLengthPx > 50) {
+                            // Calculate midpoint (simplified)
+                            var midpoint = coords[Math.floor(coords.length / 2)];
+
+                            // Calculate angle
+                            var angle = angleBetween(coords[0], coords[coords.length - 1]);
+
+                            // Create label
+                            var label = document.createElement('div');
+                            label.className = 'label';
+                            label.textContent = elev;
+                            label.style.transformOrigin = 'center';
+                            label.style.transform = `rotate(${angle}deg)`;
+
+                            // Bind tooltip and store the tooltip instance
+                            var tooltip = L.tooltip({
+                                permanent: true,
+                                direction: 'center',
+                                className: 'leaflet-tooltip'
+                            })
+                            .setContent(label.outerHTML)
+                            .setLatLng([midpoint[1], midpoint[0]])
+                            .addTo(map);
+
+                            labelTooltips.push(tooltip); // Add tooltip to the array
+                        }
+                    }
+                });
+            }
+        }
+
+        // Load GeoJSON data and add it to the map
+        fetch('albertville.geojson')
+            .then(response => response.json())
+            .then(data => {
+                window.data = data; // Store data in a global variable
+                geojsonLayer = L.geoJSON(data, {
+                    onEachFeature: function (feature, layer) {
+                        if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
+                            var coords = feature.geometry.coordinates;
+                            var elev = feature.properties.ELEV;
+
+                            // Calculate midpoint (simplified)
+                            var midpoint = coords[Math.floor(coords.length / 2)];
+
+                            // Calculate angle
+                            var angle = angleBetween(coords[0], coords[coords.length - 1]);
+
+                            // Create label
+                            var label = document.createElement('div');
+                            label.className = 'label';
+                            label.textContent = elev;
+                            label.style.transformOrigin = 'center';
+                            label.style.transform = `rotate(${angle}deg)`;
+
+                            // Bind tooltip (but don't add to map yet)
+                            var tooltip = L.tooltip({
+                                permanent: true,
+                                direction: 'center',
+                                className: 'leaflet-tooltip'
+                            })
+                            .setContent(label.outerHTML)
+                            .setLatLng([midpoint[1], midpoint[0]]);
+
+                            labelTooltips.push(tooltip); // Add tooltip to the array
+                            layer.feature.tooltip = tooltip; // Store tooltip on the feature
+                        }
+                    }
+                }).addTo(map);
+
+                // Initial label update
+                updateLabels();
+
+                // Update labels on zoomend
+                map.on('zoomend', updateLabels);
+            });
+    </script>
+</body>
+</html>
