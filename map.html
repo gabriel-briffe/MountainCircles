@@ -28,10 +28,29 @@
                 -1px 1px 0 white,
                 1px 1px 0 white;
         }
-            .leaflet-tooltip {
-            background: transparent; /* Make tooltip background transparent */
-            border: none; /* Remove tooltip border */
-            box-shadow: none; /* Remove tooltip shadow */
+        .leaflet-tooltip {
+            background: transparent; /* Make the background transparent */
+            border: none; /* Remove the border */
+            box-shadow: none; /* Remove the shadow */
+            }
+
+        .leaflet-tooltip::before,
+        .leaflet-tooltip::after {
+            border: none !important;
+            }
+
+        .custom-tooltip {
+            font-size: 15px;
+            font-weight: bold;
+            color: black; /* Or any color you prefer for the text */
+            padding: 1px; /* Add a 1px padding around the text */
+            text-transform: uppercase; 
+            text-shadow:
+                -1px -1px 0 white,
+                1px -1px 0 white,
+                -1px 1px 0 white,
+                1px 1px 0 white;
+
         }
     </style>
 </head>
@@ -54,6 +73,7 @@
         var maxZoom = 14;
         var minLengthPx = 50;
         var buffer = 300;
+        var pointLayers = []; // Global array to keep track of point layers
 
         // Haversine formula for more accurate distance in meters
         function haversine(lon1, lat1, lon2, lat2) {
@@ -241,25 +261,57 @@
         fetch('albertville.geojson')
             .then(response => response.json())
             .then(data => {
-                window.data = data; // Store data in a global variable
+                window.data = data;
                 preloadData(data);
 
                 geojsonLayer = L.geoJSON(data, {
+                    // Define how GeoJSON point features are rendered:
+                    pointToLayer: function(feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 10,
+                            fillColor: "red",
+                            color: "darkred",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 1
+                        });
+                    },
                     style: styleFeature,
-                    onEachFeature: function (feature, layer) {
+                    onEachFeature: function(feature, layer) {
+                        if (feature.geometry.type === 'Point') {
+                            // Bind tooltip with the "name" property, 15px font size
+                            layer.bindTooltip(
+                                `<div class="custom-tooltip">${feature.properties.name}</div>`,
+                                { direction: 'right', permanent: false, className: "no-arrow",
+                                offset: [10, 0] }
+                            );
+                            pointLayers.push(layer);
+                            // Open tooltip immediately if zoom is high enough
+                            if (map.getZoom() >= 8) {
+                                layer.openTooltip();
+                            }
+                        }
                         if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
                             feature.index = data.features.indexOf(feature);
                         }
                     }
                 }).addTo(map);
 
-                // Initial label update
+                // Initial update for labels on lines
                 updateLabels();
 
-                // Update both geojson style and labels every time the zoom changes
+                // Update style, line labels, and point tooltips every time the zoom changes
                 map.on('zoomend', function () {
                     geojsonLayer.setStyle(styleFeature);
                     updateLabels();
+                    const currentZoom = map.getZoom();
+                    pointLayers.forEach(function(layer) {
+                        if (currentZoom >= 8) {
+                            layer.openTooltip();
+                        } else {
+                            layer.closeTooltip();
+                        }
+                    });
                 });
             });
     </script>
