@@ -119,36 +119,56 @@
         }
 
         function preloadData(data) {
-            for (let i = 0; i < data.features.length; i++) {
-                const feature = data.features[i];
+            data.features.forEach((feature) => {
                 if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
                     const coords = feature.geometry.coordinates;
-                    const lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
-                    lineVisibilities[i] = [];
-                    for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
-                        const lineLengthPx = lineLengthInPixels(coords, zoom, lat_rad);
-                        lineVisibilities[i][zoom] = lineLengthPx > minLengthPx;
+                    let cumDistances = [0];
+                    for (let i = 1; i < coords.length; i++) {
+                        const d = haversine(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1]);
+                        cumDistances.push(cumDistances[i - 1] + d);
                     }
+                    // Cache the cumulative distances in the feature's properties for later fast lookup
+                    feature.properties.cumDistances = cumDistances;
                 }
-            }
+            });
         }
 
-        // Helper to compute a coordinate (interpolated along the polyline) at a given distance (meters)
-        function getPointAtDistance(coords, distance) {
-            let cumDist = 0;
-            for (let i = 0; i < coords.length - 1; i++) {
-                let segDist = haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
-                if (cumDist + segDist >= distance) {
-                    let remain = distance - cumDist;
-                    let t = remain / segDist;
-                    let lon = coords[i][0] + t * (coords[i+1][0] - coords[i][0]);
-                    let lat = coords[i][1] + t * (coords[i+1][1] - coords[i][1]);
-                    return [lon, lat];
+        // Function: getPointAtDistance using binary search with cumDistances
+        function getPointAtDistance(coords, targetDistance, cumDistances) {
+            if (!cumDistances) {
+                // Fallback to linear search if cumulative distances are not provided.
+                let cum = 0;
+                for (let i = 0; i < coords.length - 1; i++) {
+                    let segDist = haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
+                    if (cum + segDist >= targetDistance) {
+                        let t = (targetDistance - cum) / segDist;
+                        let lon = coords[i][0] + t * (coords[i+1][0] - coords[i][0]);
+                        let lat = coords[i][1] + t * (coords[i+1][1] - coords[i][1]);
+                        return [lon, lat];
+                    }
+                    cum += segDist;
                 }
-                cumDist += segDist;
+                return coords[coords.length - 1];
+            } else {
+                // Use binary search on the cumDistances array.
+                let lo = 0, hi = cumDistances.length - 1;
+                while (lo <= hi) {
+                    let mid = Math.floor((lo + hi) / 2);
+                    if (cumDistances[mid] < targetDistance) {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+                let i = Math.max(0, hi);
+                if (i >= cumDistances.length - 1) return coords[coords.length - 1];
+                let segmentDist = cumDistances[i+1] - cumDistances[i];
+                let remain = targetDistance - cumDistances[i];
+                let t = remain / segmentDist;
+                let lon = coords[i][0] + t * (coords[i+1][0] - coords[i][0]);
+                let lat = coords[i][1] + t * (coords[i+1][1] - coords[i][1]);
+                return [lon, lat];
             }
-            // Fallback if distance exceeds total length
-            return coords[coords.length - 1];
         }
 
         // Helper to compute an angle (in degrees) at a given distance along the line.
@@ -187,9 +207,10 @@
             labelTooltips.push(tooltip);
         }
 
-        // Updated updateLabels() that adds labels with buffer spacing along each line.
+        // Function: updateLabels with first point's latitude and optimized point lookup.
         function updateLabels() {
             var currentZoom = map.getZoom();
+            const bounds = map.getBounds();
 
             // Remove existing tooltips
             labelTooltips.forEach(function(tooltip) {
@@ -200,17 +221,18 @@
             if (currentZoom > 10) {
                 geojsonLayer.eachLayer(function (layer) {
                     if (layer.feature.geometry.type === 'LineString' && layer.feature.properties.ELEV) {
+                        // Check if feature is within the current bounds
+                        if (!bounds.intersects(layer.getBounds ? layer.getBounds() : L.geoJSON(layer.feature).getBounds())) {
+                            return; // Skip offscreen features
+                        }
                         var coords = layer.feature.geometry.coordinates;
 
-                        // Calculate the average latitude (in degrees) for this line.
-                        var avgLat = coords.reduce(function(sum, coord) {
-                            return sum + coord[1];
-                        }, 0) / coords.length;
-                        var lat_rad = avgLat * Math.PI / 180;
+                        // Use the latitude of the first point instead of the average.
+                        var lat_rad = coords[0][1] * Math.PI / 180;
 
-                        // *** New condition: Skip label rendering if the line is too short.
+                        // Skip label rendering if the line is too short.
                         if (lineLengthInPixels(coords, currentZoom, lat_rad) < minLengthPx) {
-                            return; // Skip this feature if it doesn't reach the minimum labeled length.
+                            return;
                         }
 
                         var elev = layer.feature.properties.ELEV;
@@ -221,22 +243,22 @@
                             totalMeters += haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
                         }
 
-                        // Calculate the m/px resolution for this zoom level.
-                        var resolution = Math.cos(lat_rad) * 2 * Math.PI * 6378137 / (256 * Math.pow(2, currentZoom));
+                        // Compute the map resolution using the first point's latitude.
+                        var resolution = Math.cos(coords[0][1] * Math.PI / 180) *
+                                         2 * Math.PI * 6378137 / (256 * Math.pow(2, currentZoom));
                         // Convert the buffer (px) to meters.
                         var spacingMeters = buffer * resolution;
 
-                        // If the line is too short to support two labels (with a buffer gap at each end), just use the midpoint.
+                        // If the line is too short for two labels, use just the midpoint.
                         if (totalMeters < 2 * spacingMeters) {
                             var midDistance = totalMeters / 2;
-                            var point = getPointAtDistance(coords, midDistance);
+                            var point = getPointAtDistance(coords, midDistance, layer.feature.properties.cumDistances);
                             var angle = getAngleAtDistance(coords, midDistance);
                             addLabel(point, elev, angle);
                         } else {
-                            // Starting from a buffer distance in from the start and stopping similarly before the end,
-                            // stamp labels every spacingMeters.
+                            // Place labels along the line with the specified buffer spacing.
                             for (var d = spacingMeters; d <= totalMeters - spacingMeters; d += spacingMeters) {
-                                var point = getPointAtDistance(coords, d);
+                                var point = getPointAtDistance(coords, d, layer.feature.properties.cumDistances);
                                 var angle = getAngleAtDistance(coords, d);
                                 addLabel(point, elev, angle);
                             }
@@ -300,8 +322,19 @@
                 // Initial update for labels on lines
                 updateLabels();
 
-                // Update style, line labels, and point tooltips every time the zoom changes
-                map.on('zoomend', function () {
+                // Function: debounce utility to throttle event handler execution
+                function debounce(func, delay) {
+                    let timeout;
+                    return function(...args) {
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => {
+                            func.apply(this, args);
+                        }, delay);
+                    }
+                }
+
+                // Wrap the zoomend event handler with debounce to improve performance.
+                map.on('zoomend', debounce(function () {
                     geojsonLayer.setStyle(styleFeature);
                     updateLabels();
                     const currentZoom = map.getZoom();
@@ -312,7 +345,20 @@
                             layer.closeTooltip();
                         }
                     });
-                });
+                }, 200)); // 200ms debounce delay; adjust this value as needed.
+
+                // Add moveend event handler to update labels when panning.
+                map.on('moveend', debounce(function () {
+                    updateLabels();
+                    const currentZoom = map.getZoom();
+                    pointLayers.forEach(function(layer) {
+                        if (currentZoom >= 8) {
+                            layer.openTooltip();
+                        } else {
+                            layer.closeTooltip();
+                        }
+                    });
+                }, 200));
             });
     </script>
 </body>
