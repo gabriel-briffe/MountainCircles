@@ -28,10 +28,29 @@
                 -1px 1px 0 white,
                 1px 1px 0 white;
         }
-            .leaflet-tooltip {
-            background: transparent; /* Make tooltip background transparent */
-            border: none; /* Remove tooltip border */
-            box-shadow: none; /* Remove tooltip shadow */
+        .leaflet-tooltip {
+            background: transparent; /* Make the background transparent */
+            border: none; /* Remove the border */
+            box-shadow: none; /* Remove the shadow */
+            }
+
+        .leaflet-tooltip::before,
+        .leaflet-tooltip::after {
+            border: none !important;
+            }
+
+        .custom-tooltip {
+            font-size: 15px;
+            font-weight: bold;
+            color: black; /* Or any color you prefer for the text */
+            padding: 1px; /* Add a 1px padding around the text */
+            text-transform: uppercase; 
+            text-shadow:
+                -1px -1px 0 white,
+                1px -1px 0 white,
+                -1px 1px 0 white,
+                1px 1px 0 white;
+
         }
     </style>
 </head>
@@ -50,9 +69,11 @@
         var geojsonLayer;
         var labelTooltips = []; // Store tooltip instances
         var lineVisibilities = []; // Store pre-calculated line visibilities
-        var minZoom = 10;
+        var minZoom = 9;
         var maxZoom = 14;
         var minLengthPx = 50;
+        var buffer = 300;
+        var pointLayers = []; // Global array to keep track of point layers
 
         // Haversine formula for more accurate distance in meters
         function haversine(lon1, lat1, lon2, lat2) {
@@ -67,18 +88,11 @@
         }
 
         // Function to determine if a line is long enough for labeling (in meters, then to pixels)
-        function lineLengthInMeters(coords) {
+        function lineLengthInPixels(coords, zoom, lat_rad) {
             let totalLengthMeters = 0;
             for (let i = 0; i < coords.length - 1; i++) {
                 totalLengthMeters += haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
             }
-
-            return totalLengthMeters;
-        }
-
-
-        // Function to determine if a line is long enough for labeling (in meters, then to pixels)
-        function lineLengthInPixels(totalLengthMeters, zoom, lat_rad) {
 
             // Calculate pixels per meter
             let resolution = Math.cos(lat_rad) * 2 * Math.PI * 6378137 / (256 * Math.pow(2, zoom));
@@ -105,58 +119,75 @@
         }
 
         function preloadData(data) {
-    let lineLengths = []; // Array to store pre-calculated line lengths in meters
-    let lineMidpoints = []; // Array to store pre-calculated midpoints
-    let lineAngles = []; // Array to store pre-calculated angles
-
-    // First, calculate and store the line lengths, midpoints, and angles
-    for (let i = 0; i < data.features.length; i++) {
-        const feature = data.features[i];
-        if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
-            const coords = feature.geometry.coordinates;
-            const totalLengthMeters = lineLengthInMeters(coords);
-            lineLengths[i] = totalLengthMeters; // Store the line length
-
-            // Calculate midpoint (simplified)
-            const midpoint = coords[Math.floor(coords.length / 2)];
-            lineMidpoints[i] = midpoint; // Store the midpoint
-
-            // Calculate angle
-            const angle = angleBetween(coords[0], coords[coords.length - 1]);
-            lineAngles[i] = angle; // Store the angle
-        } else {
-            lineLengths[i] = 0; // Store 0 for non-LineString features
-            lineMidpoints[i] = null; // Store null for non-LineString features
-            lineAngles[i] = 0; // Store 0 for non-LineString features
-        }
-    }
-
-    // Then, calculate the visibility flags based on the pre-calculated line lengths
-    for (let i = 0; i < data.features.length; i++) {
-        const feature = data.features[i];
-        if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
-            const coords = feature.geometry.coordinates;
-            const lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
-
-            lineVisibilities[i] = [];
-            for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
-                const lineLengthPx = lineLengthInPixels(lineLengths[i], zoom, lat_rad);
-                lineVisibilities[i][zoom] = lineLengthPx > minLengthPx;
+            for (let i = 0; i < data.features.length; i++) {
+                const feature = data.features[i];
+                if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
+                    const coords = feature.geometry.coordinates;
+                    const lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
+                    lineVisibilities[i] = [];
+                    for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
+                        const lineLengthPx = lineLengthInPixels(coords, zoom, lat_rad);
+                        lineVisibilities[i][zoom] = lineLengthPx > minLengthPx;
+                    }
+                }
             }
-        } else {
-            lineVisibilities[i] = []; // Store empty array for non-LineString features
         }
-    }
 
-    // Attach the precalculated data to the features
-    for (let i = 0; i < data.features.length; i++) {
-        data.features[i].lineLength = lineLengths[i];
-        data.features[i].midpoint = lineMidpoints[i];
-        data.features[i].angle = lineAngles[i];
-        data.features[i].visibilities = lineVisibilities[i];
-    }
-}
+        // Helper to compute a coordinate (interpolated along the polyline) at a given distance (meters)
+        function getPointAtDistance(coords, distance) {
+            let cumDist = 0;
+            for (let i = 0; i < coords.length - 1; i++) {
+                let segDist = haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
+                if (cumDist + segDist >= distance) {
+                    let remain = distance - cumDist;
+                    let t = remain / segDist;
+                    let lon = coords[i][0] + t * (coords[i+1][0] - coords[i][0]);
+                    let lat = coords[i][1] + t * (coords[i+1][1] - coords[i][1]);
+                    return [lon, lat];
+                }
+                cumDist += segDist;
+            }
+            // Fallback if distance exceeds total length
+            return coords[coords.length - 1];
+        }
 
+        // Helper to compute an angle (in degrees) at a given distance along the line.
+        // In this case we simply use the angle of the segment where the distance falls.
+        function getAngleAtDistance(coords, distance) {
+            let cumDist = 0;
+            for (let i = 0; i < coords.length - 1; i++) {
+                let segDist = haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
+                if (cumDist + segDist >= distance) {
+                    return angleBetween(coords[i], coords[i+1]);
+                }
+                cumDist += segDist;
+            }
+            if (coords.length >= 2)
+                return angleBetween(coords[coords.length - 2], coords[coords.length - 1]);
+            return 0;
+        }
+
+        // Helper to add a label tooltip at a given point with the specified text and rotation angle.
+        function addLabel(point, text, angle) {
+            var label = document.createElement('div');
+            label.className = 'label';
+            label.textContent = text;
+            label.style.transformOrigin = 'center';
+            label.style.transform = `rotate(${angle}deg)`;
+
+            var tooltip = L.tooltip({
+                permanent: true,
+                direction: 'center',
+                className: 'leaflet-tooltip'
+            })
+            .setContent(label.outerHTML)
+            .setLatLng([point[1], point[0]])
+            .addTo(map);
+
+            labelTooltips.push(tooltip);
+        }
+
+        // Updated updateLabels() that adds labels with buffer spacing along each line.
         function updateLabels() {
             var currentZoom = map.getZoom();
 
@@ -167,73 +198,121 @@
             labelTooltips = []; // Clear the array
 
             if (currentZoom > 10) {
-                // Add tooltips if zoom level is greater than 11
                 geojsonLayer.eachLayer(function (layer) {
                     if (layer.feature.geometry.type === 'LineString' && layer.feature.properties.ELEV) {
-                        const featureIndex = layer.feature.index;
-                        if (lineVisibilities[featureIndex] && lineVisibilities[featureIndex][currentZoom]) {
-                            var coords = layer.feature.geometry.coordinates;
-                            var elev = layer.feature.properties.ELEV;
+                        var coords = layer.feature.geometry.coordinates;
 
-                            // Calculate midpoint (simplified)
-                            var midpoint = coords[Math.floor(coords.length / 2)];
+                        // Calculate the average latitude (in degrees) for this line.
+                        var avgLat = coords.reduce(function(sum, coord) {
+                            return sum + coord[1];
+                        }, 0) / coords.length;
+                        var lat_rad = avgLat * Math.PI / 180;
 
-                            // Calculate angle
-                            var angle = angleBetween(coords[0], coords[coords.length - 1]);
+                        // *** New condition: Skip label rendering if the line is too short.
+                        if (lineLengthInPixels(coords, currentZoom, lat_rad) < minLengthPx) {
+                            return; // Skip this feature if it doesn't reach the minimum labeled length.
+                        }
 
-                            // Create label
-                            var label = document.createElement('div');
-                            label.className = 'label';
-                            label.textContent = elev;
-                            label.style.transformOrigin = 'center';
-                            label.style.transform = `rotate(${angle}deg)`;
+                        var elev = layer.feature.properties.ELEV;
 
-                            // Bind tooltip and store the tooltip instance
-                            var tooltip = L.tooltip({
-                                permanent: true,
-                                direction: 'center',
-                                className: 'leaflet-tooltip'
-                            })
-                            .setContent(label.outerHTML)
-                            .setLatLng([midpoint[1], midpoint[0]])
-                            .addTo(map);
+                        // Calculate the total geodesic length (in meters) of the line.
+                        var totalMeters = 0;
+                        for (let i = 0; i < coords.length - 1; i++) {
+                            totalMeters += haversine(coords[i][0], coords[i][1], coords[i+1][0], coords[i+1][1]);
+                        }
 
-                            labelTooltips.push(tooltip); // Add tooltip to the array
+                        // Calculate the m/px resolution for this zoom level.
+                        var resolution = Math.cos(lat_rad) * 2 * Math.PI * 6378137 / (256 * Math.pow(2, currentZoom));
+                        // Convert the buffer (px) to meters.
+                        var spacingMeters = buffer * resolution;
+
+                        // If the line is too short to support two labels (with a buffer gap at each end), just use the midpoint.
+                        if (totalMeters < 2 * spacingMeters) {
+                            var midDistance = totalMeters / 2;
+                            var point = getPointAtDistance(coords, midDistance);
+                            var angle = getAngleAtDistance(coords, midDistance);
+                            addLabel(point, elev, angle);
+                        } else {
+                            // Starting from a buffer distance in from the start and stopping similarly before the end,
+                            // stamp labels every spacingMeters.
+                            for (var d = spacingMeters; d <= totalMeters - spacingMeters; d += spacingMeters) {
+                                var point = getPointAtDistance(coords, d);
+                                var angle = getAngleAtDistance(coords, d);
+                                addLabel(point, elev, angle);
+                            }
                         }
                     }
                 });
             }
         }
 
+        // Define style function for GeoJSON features
+        function styleFeature(feature) {
+            if (feature.geometry.type === 'LineString') {
+                return {
+                    color: 'black',
+                    weight: (map.getZoom() < 10) ? 1 : 2  // one pixel if zoom < 10, else two pixels
+                };
+            }
+            return {};
+        }
+
         // Load GeoJSON data and add it to the map
         fetch('albertville.geojson')
             .then(response => response.json())
             .then(data => {
-                window.data = data; // Store data in a global variable
+                window.data = data;
                 preloadData(data);
 
                 geojsonLayer = L.geoJSON(data, {
-                    style: function (feature) {
-                        if (feature.geometry.type === 'LineString') {
-                            return {
-                                color: 'black', // Set line color to black
-                                weight: 2       // Set line weight to 3px
-                            };
-                        }
-                        return {};
+                    // Define how GeoJSON point features are rendered:
+                    pointToLayer: function(feature, latlng) {
+                        return L.circleMarker(latlng, {
+                            radius: 10,
+                            fillColor: "red",
+                            color: "darkred",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 1
+                        });
                     },
-                    onEachFeature: function (feature, layer) {
+                    style: styleFeature,
+                    onEachFeature: function(feature, layer) {
+                        if (feature.geometry.type === 'Point') {
+                            // Bind tooltip with the "name" property, 15px font size
+                            layer.bindTooltip(
+                                `<div class="custom-tooltip">${feature.properties.name}</div>`,
+                                { direction: 'right', permanent: false, className: "no-arrow",
+                                offset: [10, 0] }
+                            );
+                            pointLayers.push(layer);
+                            // Open tooltip immediately if zoom is high enough
+                            if (map.getZoom() >= 8) {
+                                layer.openTooltip();
+                            }
+                        }
                         if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
                             feature.index = data.features.indexOf(feature);
                         }
                     }
                 }).addTo(map);
 
-                // Initial label update
+                // Initial update for labels on lines
                 updateLabels();
 
-                // Update labels on zoomend
-                map.on('zoomend', updateLabels);
+                // Update style, line labels, and point tooltips every time the zoom changes
+                map.on('zoomend', function () {
+                    geojsonLayer.setStyle(styleFeature);
+                    updateLabels();
+                    const currentZoom = map.getZoom();
+                    pointLayers.forEach(function(layer) {
+                        if (currentZoom >= 8) {
+                            layer.openTooltip();
+                        } else {
+                            layer.closeTooltip();
+                        }
+                    });
+                });
             });
     </script>
 </body>
