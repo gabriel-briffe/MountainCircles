@@ -105,37 +105,57 @@
         }
 
         function preloadData(data) {
-            let lineLengths = []; // Array to store pre-calculated line lengths in meters
+    let lineLengths = []; // Array to store pre-calculated line lengths in meters
+    let lineMidpoints = []; // Array to store pre-calculated midpoints
+    let lineAngles = []; // Array to store pre-calculated angles
 
-            // First, calculate and store the line lengths in meters
-            for (let i = 0; i < data.features.length; i++) {
-                const feature = data.features[i];
-                if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
-                    const coords = feature.geometry.coordinates;
-                    const totalLengthMeters = lineLengthInMeters(coords);
-                    lineLengths[i] = totalLengthMeters; // Store the line length
-                } else {
-                    lineLengths[i] = 0; // Store 0 for non-LineString features
-                }
-            }
+    // First, calculate and store the line lengths, midpoints, and angles
+    for (let i = 0; i < data.features.length; i++) {
+        const feature = data.features[i];
+        if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
+            const coords = feature.geometry.coordinates;
+            const totalLengthMeters = lineLengthInMeters(coords);
+            lineLengths[i] = totalLengthMeters; // Store the line length
 
-            // Then, calculate the visibility flags based on the pre-calculated line lengths
-            for (let i = 0; i < data.features.length; i++) {
-                const feature = data.features[i];
-                if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
-                    const coords = feature.geometry.coordinates;
-                    const lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
+            // Calculate midpoint (simplified)
+            const midpoint = coords[Math.floor(coords.length / 2)];
+            lineMidpoints[i] = midpoint; // Store the midpoint
 
-                    lineVisibilities[i] = [];
-                    for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
-                        const lineLengthPx = lineLengthInPixels(lineLengths[i], zoom, lat_rad);
-                        lineVisibilities[i][zoom] = lineLengthPx > minLengthPx;
-                    }
-                } else {
-                    lineVisibilities[i] = []; // Store empty array for non-LineString features
-                }
-            }
+            // Calculate angle
+            const angle = angleBetween(coords[0], coords[coords.length - 1]);
+            lineAngles[i] = angle; // Store the angle
+        } else {
+            lineLengths[i] = 0; // Store 0 for non-LineString features
+            lineMidpoints[i] = null; // Store null for non-LineString features
+            lineAngles[i] = 0; // Store 0 for non-LineString features
         }
+    }
+
+    // Then, calculate the visibility flags based on the pre-calculated line lengths
+    for (let i = 0; i < data.features.length; i++) {
+        const feature = data.features[i];
+        if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
+            const coords = feature.geometry.coordinates;
+            const lat_rad = (coords.reduce((sum, coord) => sum + coord[1], 0) / coords.length) * Math.PI / 180; // Average latitude
+
+            lineVisibilities[i] = [];
+            for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
+                const lineLengthPx = lineLengthInPixels(lineLengths[i], zoom, lat_rad);
+                lineVisibilities[i][zoom] = lineLengthPx > minLengthPx;
+            }
+        } else {
+            lineVisibilities[i] = []; // Store empty array for non-LineString features
+        }
+    }
+
+    // Attach the precalculated data to the features
+    for (let i = 0; i < data.features.length; i++) {
+        data.features[i].lineLength = lineLengths[i];
+        data.features[i].midpoint = lineMidpoints[i];
+        data.features[i].angle = lineAngles[i];
+        data.features[i].visibilities = lineVisibilities[i];
+    }
+}
 
         function updateLabels() {
             var currentZoom = map.getZoom();
