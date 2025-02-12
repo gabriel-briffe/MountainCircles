@@ -120,10 +120,19 @@
 
                             if (lineLengthPx > 50) { // Check if line is long enough
                                 // Calculate midpoint (simplified)
-                                var midpoint = coords[Math.floor(coords.length / 2)];
+                                var midIndex = Math.floor(coords.length / 2);
+                                var midpoint = coords[midIndex];
 
-                                // Calculate angle
-                                var angle = angleBetween(coords[0], coords[coords.length - 1]);
+                                // Calculate angle using points before and after
+                                var angle;
+                                if (midIndex > 0 && midIndex < coords.length - 1) {
+                                    angle = angleBetween(coords[midIndex - 1], coords[midIndex + 1]);
+                                } else if (coords.length > 1) {
+                                    // Use first two points or last two points if midpoint is at the ends
+                                    angle = (midIndex === 0) ? angleBetween(coords[0], coords[1]) : angleBetween(coords[coords.length - 2], coords[coords.length - 1]);
+                                } else {
+                                    angle = 0; // Default angle if not enough points
+                                }
 
                                 // Create label
                                 var label = document.createElement('div');
