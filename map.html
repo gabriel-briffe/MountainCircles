@@ -16,7 +16,8 @@
             height: 100%;
         }
         .label {
-            font-size: 11pt;
+            font-size: 12pt;
+            font-weight: 400;
             color: black;
             text-align: center;
             white-space: nowrap;
@@ -40,8 +41,12 @@
     <script>
         var map = L.map('map').setView([45.5655427, 6.386334], 13);
 
-        L.tileLayer('http://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}').addTo(map);
-
+        // L.tileLayer('http://mt0.google.com/vt/lyrs=p&hl=en&x={x}\u0026y={y}\u0026z={z}').addTo(map);
+        L.tileLayer('https://tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey=7c352c8ff1244dd8b732e349e0b0fe8d', {
+            attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            apikey: '7c352c8ff1244dd8b732e349e0b0fe8d', // Replace with your actual API key
+            maxZoom: 13
+        }).addTo(map);
         var geojsonLayer;
         var labelTooltips = []; // Store tooltip instances
 
@@ -91,100 +96,51 @@
             return angle * 180 / Math.PI;
         }
 
-        function updateLabels() {
-            var currentZoom = map.getZoom();
-
-            // Remove existing tooltips
-            labelTooltips.forEach(function(tooltip) {
-                tooltip.removeFrom(map);
-            });
-            labelTooltips = []; // Clear the array
-
-            if (currentZoom > 10) {
-                // Add tooltips if zoom level is greater than 11
-                geojsonLayer.eachLayer(function (layer) {
-                    if (layer.feature.geometry.type === 'LineString' && layer.feature.properties.ELEV) {
-                        var coords = layer.feature.geometry.coordinates;
-                        var elev = layer.feature.properties.ELEV;
-
-                        // Calculate line length in pixels
-                        var lineLengthPx = lineLengthInPixels(coords, currentZoom);
-
-                        if (lineLengthPx > 50) {
-                            // Calculate midpoint (simplified)
-                            var midpoint = coords[Math.floor(coords.length / 2)];
-
-                            // Calculate angle
-                            var angle = angleBetween(coords[0], coords[coords.length - 1]);
-
-                            // Create label
-                            var label = document.createElement('div');
-                            label.className = 'label';
-                            label.textContent = elev;
-                            label.style.transformOrigin = 'center';
-                            label.style.transform = `rotate(${angle}deg)`;
-
-                            // Bind tooltip and store the tooltip instance
-                            var tooltip = L.tooltip({
-                                permanent: true,
-                                direction: 'center',
-                                className: 'leaflet-tooltip'
-                            })
-                            .setContent(label.outerHTML)
-                            .setLatLng([midpoint[1], midpoint[0]])
-                            .addTo(map);
-
-                            labelTooltips.push(tooltip); // Add tooltip to the array
-                        }
-                    }
-                });
-            }
-        }
-
         // Load GeoJSON data and add it to the map
         fetch('albertville.geojson')
             .then(response => response.json())
             .then(data => {
-                window.data = data; // Store data in a global variable
-                geojsonLayer = L.geoJSON(data, {
+                L.geoJSON(data, {
+                    style: function (feature) {
+                        if (feature.geometry.type === 'LineString') {
+                            return {
+                                color: 'black', // Set line color to black
+                                weight: 2       // Set line weight to 3px
+                            };
+                        }
+                        return {};
+                    },
                     onEachFeature: function (feature, layer) {
                         if (feature.geometry.type === 'LineString' && feature.properties.ELEV) {
                             var coords = feature.geometry.coordinates;
                             var elev = feature.properties.ELEV;
 
-                            // Calculate midpoint (simplified)
-                            var midpoint = coords[Math.floor(coords.length / 2)];
+                            // Calculate line length in pixels
+                            var lineLengthPx = lineLengthInPixels(coords, map.getZoom());
 
-                            // Calculate angle
-                            var angle = angleBetween(coords[0], coords[coords.length - 1]);
+                            if (lineLengthPx > 50) { // Check if line is long enough
+                                // Calculate midpoint (simplified)
+                                var midpoint = coords[Math.floor(coords.length / 2)];
 
-                            // Create label
-                            var label = document.createElement('div');
-                            label.className = 'label';
-                            label.textContent = elev;
-                            label.style.transformOrigin = 'center';
-                            label.style.transform = `rotate(${angle}deg)`;
+                                // Calculate angle
+                                var angle = angleBetween(coords[0], coords[coords.length - 1]);
 
-                            // Bind tooltip (but don't add to map yet)
-                            var tooltip = L.tooltip({
-                                permanent: true,
-                                direction: 'center',
-                                className: 'leaflet-tooltip'
-                            })
-                            .setContent(label.outerHTML)
-                            .setLatLng([midpoint[1], midpoint[0]]);
+                                // Create label
+                                var label = document.createElement('div');
+                                label.className = 'label';
+                                label.textContent = elev;
+                                label.style.transformOrigin = 'center';
+                                label.style.transform = `rotate(${angle}deg)`;
 
-                            labelTooltips.push(tooltip); // Add tooltip to the array
-                            layer.feature.tooltip = tooltip; // Store tooltip on the feature
+                                layer.bindTooltip(label.outerHTML, {
+                                    permanent: true,
+                                    direction: 'center',
+                                    className: 'leaflet-tooltip'
+                                }).addTo(map);
+                            }
                         }
                     }
                 }).addTo(map);
-
-                // Initial label update
-                updateLabels();
-
-                // Update labels on zoomend
-                map.on('zoomend', updateLabels);
             });
     </script>
 </body>
