@@ -6,7 +6,6 @@ import pyproj
 from geojson import Feature, FeatureCollection, Point
 from shapely.geometry import Point as ShapelyPoint
 from shapely.geometry import shape
-from shapely.ops import nearest_points
 from shapely.strtree import STRtree
 
 from src.shortcuts import normJoin

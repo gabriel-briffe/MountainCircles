@@ -12,7 +12,6 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 import pandas as pd
-import yaml
 
 from app_settings import AppSettings
 from utils.cupConvert import convert_coord
@@ -1078,7 +1077,7 @@ class MountainCirclesGUI:
         If the given path is already absolute, simply return a normalized version.
         """
         if path and not os.path.isabs(path) and self.data_folder_path.get():
-            return os.path.normpath(os.path.join(self.data_folder_path.get(), path))
+            return normJoin(self.data_folder_path.get(), path)
         return os.path.normpath(path)
 
     def init_calc_and_regions(self):

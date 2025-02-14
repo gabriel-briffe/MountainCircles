@@ -4,15 +4,18 @@ block_cipher = None
 
 # Manually list the files from src and utils directories
 datas_files = [
+    ('app_settings.py', '.'),
     ('launch.py', '.'),
     ('src/airfields.py', 'src'),
-    ('src/config.py', 'src'),
     ('src/convert_coordinates.py', 'src'),
     ('src/logging.py', 'src'),
     ('src/postprocess.py', 'src'),
     ('src/raster.py', 'src'),
+    ('src/use_case_settings.py', 'src'),
     ('utils/cupConvert.py', 'utils'),
-    ('utils/process_passes.py', 'utils')
+    ('utils/process_passes.py', 'utils'),
+    ('utils/process_sectors.py', 'utils'),
+    ('map.html', '.')
 ]
 
 a = Analysis(
