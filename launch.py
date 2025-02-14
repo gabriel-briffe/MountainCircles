@@ -4,18 +4,29 @@ import multiprocessing
 import shutil
 import subprocess
 from src.shortcuts import normJoin
-from src.config import Config
+# from src.config import Config
 from src.airfields import Airfields4326
 from src.postprocess import postProcess
 from src.raster import merge_output_rasters
 from pathlib import Path
 from src.logging import log_output
 import time
+from src.use_case_settings import Use_case
 
 from utils import process_sectors
 
 
 def make_individuals(airfield, config, output_queue=None):
+    print("DEBUG: In make_individuals. Airfield object:", airfield)
+    print("DEBUG: Airfield type:", type(airfield))
+    try:
+        airfield_name = getattr(airfield, 'name', None)
+        print("DEBUG: Retrieved airfield.name:", airfield_name)
+    except Exception as e:
+        print("DEBUG: Exception when accessing airfield.name:", e)
+
+    print("DEBUG: Airfield coordinates: x =", getattr(airfield, 'x', 'N/A'),
+          "y =", getattr(airfield, 'y', 'N/A'))
 
     if not config.isInside(airfield.x, airfield.y):
         log_output(
@@ -39,20 +50,20 @@ def make_individuals(airfield, config, output_queue=None):
             return
 
         # Ensure the computation executable exists
-        if not os.path.isfile(config.compute):
+        if not os.path.isfile(config.calculation_script_path):
             raise FileNotFoundError(
-                f"The calculation script/binary does not exist at {config.compute}")
+                f"The calculation script/binary does not exist at {config.calculation_script_path}")
 
         # Call the C++ function
         command = [
-            config.compute,
+            config.calculation_script_path,
             str(airfield.x), str(airfield.y),
             str(config.glide_ratio), str(
                 config.ground_clearance), str(config.circuit_height),
             str(config.max_altitude), str(
                 airfield_folder), config.topography_file_path, str(config.exportPasses).lower()
         ]
-
+        print("DEBUG: Running command:", command)
         result = subprocess.run(command, check=True,
                                 text=True, capture_output=True)
 
@@ -69,7 +80,7 @@ def make_individuals(airfield, config, output_queue=None):
             f"An error occurred while executing external process for {airfield.name}: {e}", output_queue)
         log_output(f"Process output: {e.output}", output_queue)
         log_output(f"Process errors: {e.stderr}", output_queue)
-        return  # Exit if there was an error with compute
+        return  # Exit if there was an error with calculation_script_path
 
     except FileNotFoundError as e:
         log_output(
@@ -97,39 +108,35 @@ def make_individuals(airfield, config, output_queue=None):
 
 def clean(config):
     calc_folder_path = config.calculation_folder_path
+    print(f"cleaning {calc_folder_path}")
     # List all items (files only, as subfolders are not expected)
-    items = [item for item in os.listdir(calc_folder_path) if os.path.isdir(normJoin(calc_folder_path, item))]
+    folders = [item for item in os.listdir(calc_folder_path) if os.path.isdir(normJoin(calc_folder_path, item))]
 
-    mountain_passes_folders = []
+
+    def move_mountain_passes(folder_name, file_path, destination_path):
+        #move the folder_path to the destination_path and create the path if it doesn't exist
+        os.makedirs(destination_path, exist_ok=True)
+        shutil.move(file_path, normJoin(destination_path, f"{folder_name}.csv"))
 
     # Iterate over files in the calculation folder
-    for item in items:
-        item_path = normJoin(calc_folder_path, item)
-        for file in os.listdir(item_path):
-            file_path = normJoin(calc_folder_path, item, file)
+    passes_folder = normJoin(calc_folder_path, "individual passes")
+    for folder in folders:
+        #skip item "individual passes"
+        if folder == "individual passes":
+            continue
+        folder_path = normJoin(calc_folder_path, folder)
+        for file in os.listdir(folder_path):
+            file_path = normJoin(calc_folder_path, folder, file)
             if os.path.isfile(file_path):
                 if file_path.endswith("mountain_passes.csv"):
-                    # Mark this file for moving
-                    mountain_passes_folders.append(item_path)
-                else:
-                    os.remove(file_path)
+                    print(f"moving {file_path} to {passes_folder}")
+                    move_mountain_passes(folder, file_path, passes_folder)
 
-    # If any mountain_passes.csv files exist, move their folders into an "individual passes" folder
-    if mountain_passes_folders:
-        # print("got mountain passes")
-        individual_passes_folder = normJoin(calc_folder_path, "individual passes")
-        if not os.path.exists(individual_passes_folder):
-            os.makedirs(individual_passes_folder)
-
-        for folder_path in mountain_passes_folders:
-            target_path = normJoin(individual_passes_folder, os.path.basename(folder_path))
-            # print("target path: ", target_path)
-            if os.path.exists(target_path):
-                if os.path.isdir(target_path):
-                    shutil.rmtree(target_path)
-                else:
-                    os.remove(target_path)
-            shutil.move(folder_path, individual_passes_folder)
+    #remove all folders in the calculation folder except for the passes folder
+    for folder in folders:
+        if folder != "individual passes" and folder!= "sector_raster":
+            print(f"removing {normJoin(calc_folder_path, folder)}")
+            shutil.rmtree(normJoin(calc_folder_path, folder))
 
     # Remove files in the calculation folder matching specified criteria
     for file in os.listdir(config.calculation_folder_path):
@@ -137,41 +144,51 @@ def clean(config):
             os.remove(normJoin(config.calculation_folder_path, file))
 
 
-def main(config_file, output_queue=None):
+def main(use_case_file, output_queue=None):
+    print("DEBUG: Entering launch.main with use_case_file:", use_case_file)
     start_time = time.time()
 
-    config = Config(config_file)
+    # Load the new use case settings from the YAML file.
+    use_case = Use_case(use_case_file=use_case_file)
+    print("DEBUG: Use_case loaded:")
+    print(f"  calculation_script: {use_case.calculation_script}")
+    print(f"  calculation_folder_path: {use_case.calculation_folder_path}")
+    print(f"  airfield_file: {use_case.airfield_file_path}")
+    print(f"  topography_file: {use_case.topography_file_path}")
+    print(f"  merged_prefix: {use_case.merged_prefix}")
+    print(f"  exportPasses: {use_case.exportPasses}")
 
-    # Example: Print out the paths for verification
-    config.print()
-
-    # Read the airfields file
-    converted_airfields = Airfields4326(config).convertedAirfields
+    # Load the airfields file using the new use_case settings
+    converted_airfields = Airfields4326(use_case).convertedAirfields
+    print("DEBUG: Number of airfields loaded:", len(converted_airfields))
 
     # Use multiprocessing to make individual files for each airfield
     with multiprocessing.Pool() as pool:
         pool.starmap(make_individuals, [
-                     (airfield, config, output_queue) for airfield in converted_airfields])
+            (airfield, use_case, output_queue) for airfield in converted_airfields
+        ])
 
-    sectors_file = f'{config.merged_output_name}_sectors.asc'
-    merged_file = f'{config.merged_output_name}.asc'
-    # Merge all output_sub.asc files
-    merge_output_rasters(config, merged_file,
-                         sectors_file, output_queue)
+    # Build the filenames using the new use_case properties.
+    sectors_file = f'{use_case.merged_prefix}_{use_case.calculation_name}_sectors.asc'
+    merged_file = f'{use_case.merged_prefix}_{use_case.calculation_name}.asc'
     
-    # Process sectors
-    process_sectors.main(config, 4000, 7, None, output_queue)
+    # Merge the output rasters.
+    merge_output_rasters(use_case, merged_file, sectors_file, output_queue)
+    
+    # Process sectors (make sure process_sectors is updated if it depends on config)
+    process_sectors.main(use_case, 4000, 7, None)
+    print("finished processing sectors")
 
-    # Only clean if clean_temporary_files is True
-    if config.clean_temporary_files:
-        clean(config)
-        log_output("cleaned temporary files", output_queue)
+    # Clean temporary files if requested
+    if use_case.clean_temporary_raster_files:
+        print("cleaning temporary files")
+        clean(use_case)
+        print("cleaned temporary files")
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    log_output(
-        f"Finished!         did it in: {elapsed_time:.2f} seconds", output_queue)
-    time.sleep(0.2)  # time to catch the last logs which are polled every 100ms
+    print(f"Finished! did it in: {elapsed_time:.2f} seconds")
+    time.sleep(0.2)
 
 
 if __name__ == "__main__":

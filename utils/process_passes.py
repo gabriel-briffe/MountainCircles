@@ -9,6 +9,8 @@ from shapely.geometry import shape
 from shapely.ops import nearest_points
 from shapely.strtree import STRtree
 
+from src.shortcuts import normJoin
+
 
 def collect_and_merge_csv_files(root_folder):
     """
@@ -22,11 +24,13 @@ def collect_and_merge_csv_files(root_folder):
     # List to store all dataframes
     dfs = []
 
-    # Walk through all subdirectories
+    # Walk through all subdirectories and get all file path that ends with .csv
     for root, dirs, files in os.walk(root_folder):
         for file in files:
-            if file.endswith('.csv') and 'passes' in file.lower():
-                file_path = os.path.join(root, file)
+            # Convert file extension to lower case for a case-insensitive match.
+            if file.lower().endswith('.csv'):
+                file_path = normJoin(root, file)
+                print(f"DEBUG: Found CSV file: {file_path}")  # Debug statement
                 try:
                     df = pd.read_csv(file_path)
                     dfs.append(df)
@@ -282,11 +286,11 @@ if __name__ == "__main__":
     # Example usage
     root_folder = "./results/three"
     input_crs = "+proj=lcc +lat_0=45.7 +lon_0=10.5 +lat_1=44 +lat_2=47.4 +x_0=700000 +y_0=250000 +datum=WGS84 +units=m +no_defs"
-    intermediate_geojson_path = os.path.join(
+    intermediate_geojson_path = normJoin(
         "results", "three", "intermediate_passes.geojson")
-    mountain_passes_path = os.path.join(
+    mountain_passes_path = normJoin(
         "data", "passes", "passesosmalps.geojson")
-    output_path = os.path.join("results", "passes", "passes4326alps.geojson")
+    output_path = normJoin("results", "passes", "passes4326alps.geojson")
 
     process_passes(root_folder, input_crs, intermediate_geojson_path,
                    mountain_passes_path, output_path)

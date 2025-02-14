@@ -4,12 +4,9 @@ import subprocess
 import threading
 import multiprocessing
 import webbrowser
-import platform
-import http.server
-import socketserver
-import shutil
-import functools
 from src.shortcuts import normJoin
+from src.use_case_settings import Use_case
+
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -17,7 +14,7 @@ from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import yaml
 
-from src.settings import cload_settings, csave_settings
+from app_settings import AppSettings
 from utils.cupConvert import convert_coord
 import launch
 
@@ -40,20 +37,26 @@ class MountainCirclesGUI:
                 pass
         
         temp_redirector = BufferRedirector(self._log_buffer)
-        sys.stdout = temp_redirector
-        sys.stderr = temp_redirector
+        # sys.stdout = temp_redirector
+        # sys.stderr = temp_redirector
         
-        # Variable to store the user's personal data folder
-        self.main_folder = tk.StringVar(value="")
+        # Variables to store settings
+        self.data_folder_path = tk.StringVar(value="")
         self.calc_script = tk.StringVar(value="")
-        self.config_folder_path = ""
+        self.region = tk.StringVar()
+        self.use_case_name = tk.StringVar()
+        self.use_case_dropdown_var = tk.StringVar()
+
+        self.current_use_case_object = None
+
+        # Create our AppSettings instance (which loads from ~/.mountaincircles.yaml by default)
+        self.app_settings = AppSettings()
+
+        # Populate interface fields with the saved settings (if they exist)
+        self.populate_settings()
 
         print("-------welcome here---------")
-        self.os_name=platform.system()
-        self.architecture=platform.machine()
-        if not self.main_folder.get():
-            print(f"Operating System: {self.os_name}")
-            print(f"Architecture: {self.architecture}")
+
 
         # Create notebook for tabs
         self.notebook = ttk.Notebook(root)
@@ -70,73 +73,62 @@ class MountainCirclesGUI:
         self.notebook.add(self.utilities_tab, text='Utilities')
 
         # Initialize variables with empty values
-        self.name = tk.StringVar(value="")
         self.airfield_path = tk.StringVar(value="")
         self.topo_path = tk.StringVar(value="")
         self.topo_CRSfile_path = tk.StringVar(value="")
-        self.result_path = tk.StringVar(value="")
         self.glide_ratio = tk.StringVar(value="")
         self.ground_clearance = tk.StringVar(value="")
         self.circuit_height = tk.StringVar(value="")
         self.max_altitude = tk.StringVar(value="")
         self.contour_height = tk.StringVar(value="")
         self.delete_previous_calculation = tk.BooleanVar(value=False)
-        self.gurumaps = tk.BooleanVar(value=False)
+        self.gurumaps_styles = tk.BooleanVar(value=False)
         self.export_passes = tk.BooleanVar(value=False)
-        self.clean_temporary_files = tk.BooleanVar(value=False)
+        self.clean_temporary_raster_files = tk.BooleanVar(value=False)
 
 
-        self.input_crs = ""
-        self.GMstyles_folder_path = ""
-        self.result_config_path = ""
+        # self.input_crs = ""
+        # self.GMstyles_folder_path = ""
+        # self.result_config_path = ""
         self.ref_mountain_passes_path = tk.StringVar(value="")
         self.cup_input_path = tk.StringVar(value="")
         self.cup_output_path = tk.StringVar(value="")
         self.process_passes_CRSfile = tk.StringVar(value="")
-        self.merged_output_name = "aa"
+        # self.merged_output_name = "aa"
         self.help_process_passes_filepath = ""
         self.help_run_filepath = ""
         # Setup tabs
         self.setup_download_tab()
         self.setup_run_tab()
         self.setup_utilities_tab()
-        self.load_settings()
-        if not self.main_folder.get() or not self.calc_script.get():
+        # self.load_settings()   # now using AppSettings instead of cload_settings
+        if not self.data_folder_path.get() or not self.calc_script.get():
             print("You need to fill up the two fields on the download tab to run any calculation.")
+        else:
+            self.notebook.select(self.run_tab)
+            
+        # If a saved use case exists in AppSettings then update and populate the fields automatically
+        if self.app_settings.use_case:
+            self.refresh_use_case_dropdown(active_use_case=self.app_settings.use_case)
+            # Set the dropdown variable to the saved use case
+            self.use_case_dropdown_var.set(self.app_settings.use_case)
+            # Automatically trigger the loading and population of fields
+            self.on_use_case_select()
 
 
+    def populate_settings(self):
+        """
+        Populate the GUI input fields with stored settings.
+        On a fresh start, these will be empty; otherwise, the data_folder, calculation script,
+        and region fields will be pre-filled.
+        """
+        if self.app_settings.data_folder_path:
+            self.data_folder_path.set(self.app_settings.data_folder_path)
+        if self.app_settings.calc_script:
+            self.calc_script.set(self.app_settings.calc_script)
+        if self.app_settings.region:
+            self.region.set(self.app_settings.region)
 
-
-    def first_contact(self, path):
-        self.config_folder_path = normJoin(path, "common files", "configuration files")
-        self.GMstyles_folder_path = normJoin(path, "common files", "Guru Map styles")
-        self.help_process_passes_filepath = normJoin(path,"common files","help_files","process_passes_help.txt")
-        self.help_run_filepath = normJoin(path,"common files","help_files","run_help.txt")
-        self.refresh_yaml_list()
-        # Retrieve system name and architecture using the platform module
-        # For macOS ARM64
-        if self.os_name == "Darwin" and self.architecture in ["arm64", "aarch64"]:
-            calc_path = normJoin(path, "common files", "calculation script", "compute_mac_arm64")
-            if os.path.exists(calc_path):  # Optionally check if the path exists
-                self.calc_script.set(calc_path)
-        # For macOS x86_64
-        if self.os_name == "Darwin" and self.architecture in ["AMD64", "x86_64"]:
-            calc_path = normJoin(path, "common files", "calculation script", "compute_mac_x86_64")
-            if os.path.exists(calc_path):
-                self.calc_script.set(calc_path)
-        # For Windows ARM64
-        if self.os_name == "Windows" and self.architecture in ["arm64", "aarch64"]:
-            calc_path = normJoin(path, "common files", "calculation script", "compute_windows_arm64.exe")
-            if os.path.exists(calc_path):
-                self.calc_script.set(calc_path)
-        # For Windows x86_64
-        if self.os_name == "Windows" and self.architecture in ["AMD64", "x86_64"]:
-            calc_path = normJoin(path, "common files", "calculation script", "compute_windows_AMD64.exe")
-            if os.path.exists(calc_path):
-                self.calc_script.set(calc_path)
-        if self.calc_script.get():# and not "calc_script" in load_settings():
-            self.save_settings()
-            # print(f"thank you, calculation script loaded: {self.calc_script.get()}")
 
     def setup_download_tab(self):
         """Setup the Download tab without scroll functionality"""
@@ -174,20 +166,28 @@ class MountainCirclesGUI:
         param_frame.pack(pady=10)
 
         # MountainCircles Folder
-        ttk.Label(param_frame, text="the MountainCircle folder:").grid(
+        ttk.Label(param_frame, text="the MountainCircles folder:").grid(
             row=1, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.main_folder).grid(
+        ttk.Entry(param_frame, textvariable=self.data_folder_path).grid(
             row=1, column=1, padx=5, sticky="ew")
         ttk.Button(param_frame, text="Browse", command=lambda: self.browse_directory(
-            "MountainCircles Folder", self.main_folder)).grid(row=1, column=2)
+            "MountainCircles Folder", self.data_folder_path)).grid(row=1, column=2)
 
         # Calculation script
         ttk.Label(param_frame, text="the calculation script:").grid(
             row=3, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.calc_script).grid(
             row=3, column=1, padx=5, sticky="ew")
-        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file(
-            "Calculation script", self.calc_script)).grid(row=3, column=2)
+        
+        # # Region dropdown menu below the calculation script section.
+        # ttk.Label(param_frame, text="Region:").grid(row=5, column=0, sticky="w")
+        # self.region_dropdown = ttk.Combobox(
+        #     param_frame,
+        #     textvariable=self.region,
+        #     values=self.app_settings.regions,
+        #     state="readonly"
+        # )
+        # self.region_dropdown.grid(row=5, column=1, padx=5, sticky="ew")
 
         param_frame.grid_columnconfigure(1, weight="1")
 
@@ -198,143 +198,102 @@ class MountainCirclesGUI:
         main_frame.pack(expand=True, fill="both")
         main_frame.pack_propagate(False)
 
-        # ------------------------------------------------------------
+        # Create a frame (or label frame) at the top for Region and Use Case selections
+        use_case_frame = ttk.LabelFrame(main_frame, padding="5")
+        use_case_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
 
-        # Create configuration frame at the top
-        config_frame = ttk.LabelFrame(main_frame, padding="5")
-        # config_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
-        config_frame.grid(row=0, column=0, columnspan=3,
-                          sticky=(tk.W, tk.E), pady=5)
-
-        # Get list of YAML files and set up the config dropdown
-        self.yaml_files = []
-
-        # Add Config dropdown and refresh button
-        ttk.Label(config_frame, text="Select Config:").grid(
+        # Region Dropdown (populated from app_settings.regions)
+        ttk.Label(use_case_frame, text="Select Region:").grid(
             row=0, column=0, padx=5, sticky="ew")
-        self.config_dropdown = ttk.Combobox(
-            config_frame, values=self.yaml_files, width=30)
-        self.config_dropdown.grid(row=0, column=1, padx=5, sticky="ew")
-        self.config_dropdown.bind(
-            '<<ComboboxSelected>>', self.load_selected_config)
+        self.region_dropdown = ttk.Combobox(
+            use_case_frame,
+            values=self.app_settings.regions,  # Using regions from app_settings
+            width=30,
+            textvariable=self.region,  # Ensure self.region is a tk.StringVar
+            state="readonly"
+        )
+        self.region_dropdown.grid(row=0, column=1, padx=5, sticky="ew")
+        self.region_dropdown.bind("<<ComboboxSelected>>", self.on_region_select)
 
-        # Set default selection to the first available value if any exist
-        if self.yaml_files:
-            self.config_dropdown.current(0)
-            self.load_selected_config(self)
+        # Use Case Dropdown (populated from app_settings.use_cases)
+        ttk.Label(use_case_frame, text="Select Use Case:").grid(
+            row=1, column=0, padx=5, sticky="ew")
+        self.use_case_dropdown = ttk.Combobox(
+            use_case_frame,
+            values=self.app_settings.use_cases,  # Use cases provided by app_settings
+            width=30,
+            textvariable=self.use_case_dropdown_var,  # Separate variable for dropdown
+            state="readonly"
+        )
+        self.use_case_dropdown.grid(row=1, column=1, padx=5, sticky="ew")
+        self.use_case_dropdown.bind("<<ComboboxSelected>>", self.on_use_case_select)
 
-        ttk.Button(config_frame, text="Refresh List", command=self.refresh_yaml_list).grid(
-            row=0, column=2, padx=5, sticky="ew")
+        # -----------------------------------------------------------------------
+        # Parameter input frame
+        param_frame = ttk.LabelFrame(main_frame, text="Use Case Parameters :", padding="5")
+        param_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=5)
 
-        # Configure grid columns to spread evenly
-        config_frame.grid_columnconfigure(0, weight=0)
-        config_frame.grid_columnconfigure(1, weight=2)
-        config_frame.grid_columnconfigure(2, weight=0)
-
-        # -------------------------------------------------------------
-
-        # Create parameter input frame
-        param_frame = ttk.LabelFrame(
-            main_frame, text="Config Parameters :", padding="5")
-        param_frame.grid(row=1, column=0, columnspan=3,
-                         sticky=(tk.W, tk.E), pady=5)
-
-        # Config name and Save button
-        ttk.Label(param_frame, text="Config name:").grid(
-            row=1, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.name).grid(
-            row=1, column=1, padx=5, sticky="ew")
-        ttk.Button(param_frame, text="Save Config",
-                   command=self.save_config).grid(row=1, column=2)
+        # Use Case name and Save button
+        ttk.Label(param_frame, text="Use Case name:").grid(row=1, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.use_case_name).grid(row=1, column=1, padx=5, sticky="ew")
+        ttk.Button(param_frame, text="Save Use Case", command=self.save_use_case).grid(row=1, column=2)
 
         # Airfield file selection
-        ttk.Label(param_frame, text="Airfield File:").grid(
-            row=2, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.airfield_path).grid(
-            row=2, column=1, padx=5, sticky="ew")
+        ttk.Label(param_frame, text="Airfield File:").grid(row=2, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.airfield_path).grid(row=2, column=1, padx=5, sticky="ew")
         airfield_buttons_frame = ttk.Frame(param_frame)
         airfield_buttons_frame.grid(row=2, column=2, sticky="w")
         ttk.Button(airfield_buttons_frame, text="Browse", command=lambda: self.browse_file("Airfield", self.airfield_path)).grid(row=0, column=0, padx=2)
-        ttk.Button(airfield_buttons_frame, text="Open/edit",
-                   command=lambda: self.open_file("Airfield")).grid(row=0, column=1, padx=2)
-
-        # Topography file selection
-        ttk.Label(param_frame, text="Topography File:").grid(
-            row=3, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.topo_path).grid(
-            row=3, column=1, padx=5, sticky="ew")
-        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file(
-            "Topography File", self.topo_path)).grid(row=3, column=2)
-
-        # CRS file selection added after topography section
-        ttk.Label(param_frame, text="CRS File:").grid(
-            row=4, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.topo_CRSfile_path).grid(
-            row=4, column=1, padx=5, sticky="ew")
-        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_file(
-            "CRS File", self.topo_CRSfile_path, [("Text files", "*.txt")])).grid(row=4, column=2)
-
-        # Result folder selection (shifted down to row 5)
-        ttk.Label(param_frame, text="Result Folder: (.../RESULTS/configName)").grid(
-            row=5, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.result_path).grid(
-            row=5, column=1, padx=5, sticky="ew")
-        ttk.Button(param_frame, text="Browse", command=lambda: self.browse_directory(
-            "Results Folder", self.result_path)).grid(row=5, column=2)
+        ttk.Button(airfield_buttons_frame, text="Open/edit", command=lambda: self.open_file("Airfield")).grid(row=0, column=1, padx=2)
 
         # Glide Parameters Section
-        ttk.Label(param_frame, text="Glide Parameters", font=(
-            'Arial', 10, 'bold')).grid(row=6, column=0, sticky="w", pady=(15, 5))
-
-        # Glide ratio
-        ttk.Label(param_frame, text="Glide Ratio:").grid(
-            row=7, column=0, sticky="w")
-        ttk.Entry(param_frame, textvariable=self.glide_ratio,
-                  width=10).grid(row=7, column=1, sticky="w", padx=5)
+        ttk.Label(param_frame, text="Glide Parameters", font=('Arial', 10, 'bold')).grid(row=3, column=0, sticky="w", pady=(15, 5))
+        ttk.Label(param_frame, text="Glide Ratio:").grid(row=4, column=0, sticky="w")
+        ttk.Entry(param_frame, textvariable=self.glide_ratio, width=10).grid(row=4, column=1, sticky="w", padx=5)
 
         # Ground clearance
         ttk.Label(param_frame, text="Ground Clearance (m):").grid(
-            row=8, column=0, sticky="w")
+            row=5, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.ground_clearance,
-                  width=10).grid(row=8, column=1, sticky="w", padx=5)
+                  width=10).grid(row=5, column=1, sticky="w", padx=5)
 
         # Circuit height
         ttk.Label(param_frame, text="Circuit Height (m):").grid(
-            row=9, column=0, sticky="w")
+            row=6, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.circuit_height,
-                  width=10).grid(row=9, column=1, sticky="w", padx=5)
+                  width=10).grid(row=6, column=1, sticky="w", padx=5)
 
         # Max altitude
         ttk.Label(param_frame, text="Max Altitude (m):").grid(
-            row=10, column=0, sticky="w")
+            row=7, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.max_altitude,
-                  width=10).grid(row=10, column=1, sticky="w", padx=5)
+                  width=10).grid(row=7, column=1, sticky="w", padx=5)
 
         # Additional Options Section
         ttk.Label(param_frame, text="Additional Options", font=(
-            'Arial', 10, 'bold')).grid(row=11, column=0, sticky="w", pady=(15, 5))
+            'Arial', 10, 'bold')).grid(row=8, column=0, sticky="w", pady=(15, 5))
 
         # New Field: Contour Height
         ttk.Label(param_frame, text="Altitude delta between circles (m):").grid(
-            row=12, column=0, sticky="w")
+            row=9, column=0, sticky="w")
         ttk.Entry(param_frame, textvariable=self.contour_height,
-                  width=10).grid(row=12, column=1, sticky="w", padx=5)
+                  width=10).grid(row=9, column=1, sticky="w", padx=5)
 
         # Checkboxes
         ttk.Checkbutton(param_frame, text="Erase previous calculation (if any)",
-                        variable=self.delete_previous_calculation).grid(row=13, column=0, sticky="w")
+                        variable=self.delete_previous_calculation).grid(row=10, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Generate data files for Guru Maps",
-                        variable=self.gurumaps).grid(row=14, column=0, sticky="w")
+                        variable=self.gurumaps_styles).grid(row=11, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Create mountain passes files",
-                        variable=self.export_passes).grid(row=15, column=0, sticky="w")
+                        variable=self.export_passes).grid(row=12, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Clean temporary files",
-                        variable=self.clean_temporary_files).grid(row=16, column=0, sticky="w")
+                        variable=self.clean_temporary_raster_files).grid(row=13, column=0, sticky="w")
 
         param_frame.grid_columnconfigure(1, weight="1")
 
         # Control buttons frame
         control_btn_frame = ttk.Frame(main_frame)
-        control_btn_frame.grid(row=17, column=0, columnspan=3, pady=10)
+        control_btn_frame.grid(row=14, column=0, columnspan=3, pady=10)
         
         ttk.Button(control_btn_frame, text="Clear Log",
                    command=self.clear_log).pack(side=tk.LEFT, padx=5)
@@ -353,13 +312,13 @@ class MountainCirclesGUI:
 
         # Status display area
         ttk.Label(main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(
-            row=18, column=0, sticky="w", pady=5)
+            row=15, column=0, sticky="w", pady=5)
         self.status_text = tk.Text(main_frame)
         self.status_text.grid(
-            row=19, column=0, columnspan=3, pady=5, sticky="nsew")
+            row=16, column=0, columnspan=3, pady=5, sticky="nsew")
         scroller = ttk.Scrollbar(
             main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
-        scroller.grid(row=19, column=3, sticky="ns")
+        scroller.grid(row=16, column=3, sticky="ns")
         self.status_text['yscrollcommand'] = scroller.set
         
         # Flush any previously captured output from the temporary buffer into the status_text widget.
@@ -372,7 +331,7 @@ class MountainCirclesGUI:
         sys.stderr = MountainCirclesGUI.TextRedirector(self.status_text)
         
         main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_rowconfigure(19, weight=1)
+        main_frame.grid_rowconfigure(16, weight=1)
 
     def setup_utilities_tab(self):
         """Setup the Utilities tab without scroll functionality"""
@@ -462,14 +421,27 @@ class MountainCirclesGUI:
     def browse_file(self, file_type, var, filetypes=None, initialdir=None):
         """Browse for a file and update the corresponding variable"""
         if initialdir is None:
-            initialdir = self.main_folder.get()
+            initialdir = self.data_folder_path.get()
         if file_type == "Calculation script":
-            if os.path.exists(normJoin(self.main_folder.get(), "common files", "calculation script")):
-                initialdir = normJoin(initialdir, "common files", "calculation script")
-
+            calc_script_dir = normJoin(self.data_folder_path.get(), "common files", "calculation script")
+            if os.path.exists(calc_script_dir):
+                initialdir = calc_script_dir
+        elif file_type == "Airfield":
+            region = self.region.get()
+            if not region:
+                messagebox.showwarning("Warning", "Region is not selected. Please select a region first.")
+                return
+            airfield_dir = normJoin(self.data_folder_path.get(), region, "airfield files")
+            if os.path.exists(airfield_dir):
+                initialdir = airfield_dir
+            else:
+                messagebox.showwarning("Warning", f"Airfield folder not found:\n{airfield_dir}")
+                # fallback to the data folder path if the airfields folder is not found
+                initialdir = self.data_folder_path.get()
+        
         if filetypes is None:
             filetypes = [("All files", "*.*")]
-
+        
         path = filedialog.askopenfilename(
             title=f"Select {file_type}",
             initialdir=initialdir,
@@ -508,16 +480,18 @@ class MountainCirclesGUI:
 
     def browse_directory(self, dir_type, var):
         """Browse for a directory and update the corresponding variable"""
-        # Use self.main_folder as the initial directory if it is set; otherwise, use the current working directory.
-        initial_dir = self.main_folder.get() if self.main_folder.get() else os.getcwd()
+        # Use self.data_folder_path as the initial directory if it is set; otherwise, use the current working directory.
+        initial_dir = self.data_folder_path.get() if self.data_folder_path.get() else os.getcwd()
         path = filedialog.askdirectory(
             title=f"Select {dir_type}", initialdir=initial_dir)
         if path:
             var.set(path)
-            if dir_type == "Results Folder":
-                self.result_config_path = normJoin(path, self.name.get())
             if dir_type == "MountainCircles Folder":
-                self.first_contact(path)
+                self.app_settings.data_folder_path = path
+                self.app_settings.save()
+                # Update the region dropdown since app_settings.regions has changed.
+                self.init_calc_and_regions()
+                # Manually update the calculation script field in the GUI:
 
     def open_file(self, file_type):
         """Open a file with the system's default application.
@@ -560,204 +534,127 @@ class MountainCirclesGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open file: {str(e)}")
 
-    def refresh_yaml_list(self, active_config=None):
-        """Refresh the list of YAML files in the dropdown.
-        
-        If active_config is provided and exists in the list,
-        that config file will be automatically selected and loaded.
-        """
-        directory = self.config_folder_path
-        if os.path.isdir(directory):
-            self.yaml_files = [f for f in os.listdir(directory) if f.endswith('.yaml')]
-        else:
-            self.yaml_files = []
-        self.config_dropdown['values'] = self.yaml_files
 
-        if self.yaml_files:
-            if active_config and active_config in self.yaml_files:
-                self.config_dropdown.current(self.yaml_files.index(active_config))
-            else:
-                self.config_dropdown.current(0)
-            self.load_selected_config()
+    def load_selected_use_case(self, event=None):
+        """Load the selected use case YAML file using the Use_case class from use_case_settings.py and update GUI fields accordingly."""
 
-    def load_selected_config(self, event=None):
-        """Load the selected configuration file"""
-        selected = self.config_dropdown.get()
+        # Get the selected use case file (e.g. "MyUseCase.yaml")
+        selected = self.use_case_dropdown_var.get()
         if not selected:
             return
 
         # Construct the full path to the selected YAML file
-        full_path = normJoin(self.config_folder_path, selected)
-
+        file_path = normJoin(self.app_settings.configuration_files_path, selected)
         try:
-            with open(full_path, 'r') as f:
-                config = yaml.safe_load(f)
-
-            # Update GUI fields with loaded values
-            self.name.set(config.get('name', 'gui_generated'))
-            self.airfield_path.set(config['input_files']['airfield_file'])
-            self.topo_path.set(config['input_files']['topography_file'])
-            self.topo_CRSfile_path.set(config['input_files']['CRS_file'])
-            self.result_path.set(config['input_files']['result_folder'])
-
-            self.glide_ratio.set(
-                str(config['glide_parameters']['glide_ratio']))
-            self.ground_clearance.set(
-                str(config['glide_parameters']['ground_clearance']))
-            self.circuit_height.set(
-                str(config['glide_parameters']['circuit_height']))
-
-            self.max_altitude.set(
-                str(config['calculation_parameters']['max_altitude']))
-
-            # New: Load contour height from rendering section
-            self.contour_height.set(str(config['rendering']['contour_height']))
-
-            self.gurumaps.set(config.get('gurumaps', True))
-            self.export_passes.set(config.get('exportPasses', False))
-            self.delete_previous_calculation.set(config.get('reset_results', False))
-            self.clean_temporary_files.set(
-                config.get('clean_temporary_files', False))
+            # Create a Use_case instance by loading the YAML file
+            use_case_obj = Use_case(use_case_file=file_path)
             
-            self.save_settings()
+            # Update GUI fields from the loaded use case
+            self.airfield_path.set(use_case_obj.airfield_file_path)
+            self.topo_path.set(use_case_obj.topography_file)
+            self.topo_CRSfile_path.set(use_case_obj._crs_file_path)
+            
+            self.glide_ratio.set(use_case_obj.glide_ratio)
+            self.ground_clearance.set(use_case_obj.ground_clearance)
+            self.circuit_height.set(use_case_obj.circuit_height)
+            self.max_altitude.set(use_case_obj.max_altitude)
+            self.contour_height.set(use_case_obj.contour_height)
+            
+            # For checkboxes or boolean values:
+            self.gurumaps_styles.set(use_case_obj.gurumaps_styles)
+            self.export_passes.set(use_case_obj.exportPasses)
+            self.delete_previous_calculation.set(use_case_obj.delete_previous_calculation)
+            self.clean_temporary_raster_files.set(use_case_obj.clean_temporary_raster_files)
 
+            # Save the selected use case into AppSettings
+            self.app_settings.use_case = selected
+            self.app_settings.save()
         except Exception as e:
-            messagebox.showerror(
-                "Error", f"Failed to load configuration: {str(e)}")
+            messagebox.showerror("Error", f"Failed to load use case: {e}")
 
-    def save_config(self):
-        """Save current parameters to a YAML configuration file"""
+    def save_use_case(self):
+        """Save current parameters as a YAML use case file via the Use_case object."""
         try:
             # Check if MountainCircles Folder has been filled
-            if not self.main_folder.get().strip():
+            if not self.data_folder_path.get().strip():
                 messagebox.showerror(
-                    "Error", "Please tell the app in the download tab where you put the MountainCircle folder before saving the configuration.")
+                    "Error",
+                    "Please tell the app in the download tab where you put the MountainCircle folder before saving the use case."
+                )
                 return
 
-            self.validate_inputs()
-            config = self.create_config_dict()
+            # Create a parameter dictionary for the Use_case object.
+            params = {
+                "data_folder_path": self.data_folder_path.get(),
+                "region": self.region.get(),
+                "use_case_name": self.use_case_name.get(),
+                "airfield_file": self.airfield_path.get(),
+                "calculation_script": self.calc_script.get(),
+                "glide_ratio": int(self.glide_ratio.get()),
+                "ground_clearance": int(self.ground_clearance.get()),
+                "circuit_height": int(self.circuit_height.get()),
+                "max_altitude": int(self.max_altitude.get()),
+                "contour_height": int(self.contour_height.get()),
+                "merged_prefix": "aa",
+                "gurumaps_styles": self.gurumaps_styles.get(),
+                "exportPasses": self.export_passes.get(),
+                "delete_previous_calculation": self.delete_previous_calculation.get(),
+                "clean_temporary_raster_files": self.clean_temporary_raster_files.get(),
+            }
 
-            # Create filename from config name
-            filename = normJoin(
-                self.config_folder_path, f"{self.name.get()}.yaml")
+            print("[DEBUG] Use case parameters:", params)
 
-            # Check if file exists
-            if os.path.exists(filename):
-                if not messagebox.askyesno("Confirm Overwrite",
-                                           f"File '{filename}' already exists. Do you want to overwrite it?"):
-                    return
+            # Create the Use_case object using parameters.
+            use_case_obj = Use_case(params=params)
+            
+            # Use the object's own save method to write the YAML file.
+            use_case_obj.save()
 
-            with open(filename, 'w') as f:
-                # Custom formatting function to match the desired style
-                def custom_str_presenter(dumper, data):
-                    if len(data.splitlines()) > 1:  # check for multiline string
-                        return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-                    return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+            # Refresh the use case dropdown with the new list.
+            self.refresh_use_case_dropdown(active_use_case=use_case_obj.use_case_name)
 
-                # Add custom string presenter to the YAML dumper
-                yaml.add_representer(str, custom_str_presenter)
-
-                # Write the header
-                f.write(f"name: {config['name']}\n\n")
-
-                # Write input_files section
-                f.write("input_files:\n")
-                for key, value in config['input_files'].items():
-                    f.write(f"  {key}: {value}\n")
-                f.write("\n")
-
-                # Write CRS section
-                f.write("CRS:\n")
-                f.write(f"  name: {config['CRS']['name']}\n")
-                f.write(f"  definition: {config['CRS']['definition']}\n")
-                f.write("\n")
-
-                # Write glide_parameters section
-                f.write("glide_parameters:\n")
-                for key, value in config['glide_parameters'].items():
-                    # Convert float to int by removing decimal point
-                    f.write(f"  {key}: {int(value)}\n")
-                f.write("\n")
-
-                # Write calculation_parameters section
-                f.write("calculation_parameters:\n")
-                f.write(
-                    f"  max_altitude: {int(config['calculation_parameters']['max_altitude'])}\n")
-                f.write("\n")
-
-                # Write rendering section
-                f.write("rendering:\n")
-                f.write(
-                    f"  contour_height: {int(config['rendering']['contour_height'])}\n")
-                f.write("\n")
-
-                # Write boolean parameters
-                f.write(f"gurumaps: {str(config['gurumaps']).lower()}\n")
-                f.write(
-                    f"exportPasses: {str(config['exportPasses']).lower()}\n")
-                f.write(
-                    f"reset_results: {str(config['reset_results']).lower()}\n")
-                f.write(
-                    f"clean_temporary_files: {str(config['clean_temporary_files']).lower()}\n")
-                f.write("\n")
-
-                # Write merged_output_name
-                f.write(
-                    f"merged_output_name: {config['merged_output_name']}\n")
-
-            # Refresh the dropdown list after saving and pass the name of the just-saved config
-            self.refresh_yaml_list(active_config=os.path.basename(filename))
-            messagebox.showinfo("Success", "Configuration saved successfully!")
-
+            messagebox.showinfo("Success", "Use case saved successfully!")
         except Exception as e:
-            messagebox.showerror(
-                "Error", f"Failed to save configuration: {str(e)}")
+            messagebox.showerror("Error", f"Failed to save use case: {str(e)}")
 
-    def create_config_dict(self):
-        """before writing temp or saving"""
+    def create_use_case_dict(self):
+        """Create a dictionary with current parameters to save as a use case."""
         from collections import OrderedDict
 
-        config = OrderedDict([
-            ("name", self.name.get() + " "),  # Add space to match format
-
+        use_case = OrderedDict([
+            ("use_case_name", self.use_case.get()),
+            ("region", self.region.get()),
             ("input_files", OrderedDict([
-                ("airfield_file", self.airfield_path.get()),
-                ("topography_file", self.topo_path.get()),
-                ("CRS_file", self.topo_CRSfile_path.get()),
-                ("result_folder", self.result_path.get()),
-                ("compute", self.calc_script.get()),
-                ("mapcssTemplate", normJoin(
-                    self.GMstyles_folder_path, "circlesAndAirfields.mapcss"))
+                ("airfield_file", self.get_abs_path(self.airfield_path.get())),
+                ("topography_file", self.get_abs_path(self.topo_path.get())),
+                ("CRS_file", self.get_abs_path(self.topo_CRSfile_path.get())),
+                ("result_folder", self.get_abs_path(self.result_path.get())),
+                ("compute", self.get_abs_path(self.calc_script.get())),
+                ("mapcssTemplate", self.get_abs_path(normJoin(self.GMstyles_folder_path, "circlesAndAirfields.mapcss")))
             ])),
-
             ("CRS", OrderedDict([
                 ("name", "custom"),
                 ("definition", self.input_crs)
             ])),
-
             ("glide_parameters", OrderedDict([
                 ("glide_ratio", float(self.glide_ratio.get())),
                 ("ground_clearance", float(self.ground_clearance.get())),
                 ("circuit_height", float(self.circuit_height.get()))
             ])),
-
             ("calculation_parameters", OrderedDict([
                 ("max_altitude", float(self.max_altitude.get()))
             ])),
-
             ("rendering", OrderedDict([
                 ("contour_height", int(self.contour_height.get()))
             ])),
-
-            ("gurumaps", self.gurumaps.get()),
+            ("gurumaps_styles", self.gurumaps_styles.get()),
             ("exportPasses", self.export_passes.get()),
-            ("reset_results", self.delete_previous_calculation.get()),
-            ("clean_temporary_files", self.clean_temporary_files.get()),
-
+            ("delete_previous_calculation", self.delete_previous_calculation.get()),
+            ("clean_temporary_raster_files", self.clean_temporary_raster_files.get()),
             ("merged_output_name", self.merged_output_name)
         ])
 
-        return config
+        return use_case
 
     def validate_inputs(self):
         """Validate all input fields"""
@@ -788,73 +685,56 @@ class MountainCirclesGUI:
             raise ValueError(f"Unable to read CRS file: {str(e)}")
 
     def run_processing(self):
-        """Run the main processing with current parameters"""
+        """Run the main processing with use case parameters.
+        
+        Instead of manually generating the YAML configuration,
+        we now gather parameters and let the Use_case class handle path generation and saving.
+        """
         try:
-            # Check if MountainCircles Folder and Calculation Script fields have been filled
+            # Check for required fields (update field names as needed)
             missing_fields = []
-            if not self.main_folder.get().strip():
+            if not self.data_folder_path.get().strip():
                 missing_fields.append("MountainCircles Folder")
             if not self.calc_script.get().strip():
                 missing_fields.append("Calculation Script")
             if missing_fields:
-                messagebox.showerror("Error",
-                                     "The following field(s) are missing on the download tab: " + ", ".join(missing_fields))
+                messagebox.showerror("Error", "Missing: " + ", ".join(missing_fields))
                 return
 
-            self.validate_inputs()
-            config = self.create_config_dict()
+            # Prepare parameters dictionary for the Use_case
+            params = {
+                "data_folder_path": self.data_folder_path.get(),
+                "region": self.region.get(),
+                "use_case_name": self.use_case_name.get(),
+                "airfield_file": self.airfield_path.get(),
+                "calculation_script": self.calc_script.get(),
+                "glide_ratio": int(self.glide_ratio.get()),
+                "ground_clearance": int(self.ground_clearance.get()),
+                "circuit_height": int(self.circuit_height.get()),
+                "max_altitude": int(self.max_altitude.get()),
+                "contour_height": int(self.contour_height.get()),
+                "merged_prefix": "aa",  # Adjust as needed
+                "gurumaps_styles": self.gurumaps_styles.get(),
+                "exportPasses": self.export_passes.get(),
+                "delete_previous_calculation": self.delete_previous_calculation.get(),
+                "clean_temporary_raster_files": self.clean_temporary_raster_files.get(),
+            }
 
-            # Create temporary config file
-            temp_config_path = normJoin(
-                self.config_folder_path, "temp_config.yaml")
+            print("DEBUG: run_processing parameters:", params)
 
-            with open(temp_config_path, 'w') as f:
-                # Write the config in the same format as save_config
-                f.write(f"name: {config['name']}\n\n")
+            # Create and save the use case using the Use_case class
+            self.current_use_case_object = Use_case(params=params)
+            self.current_use_case_object.save()
 
-                f.write("input_files:\n")
-                for key, value in config['input_files'].items():
-                    f.write(f"  {key}: {value}\n")
-                f.write("\n")
+            # Retrieve the path of the newly created YAML file from the Use_case helper property
+            config_path = normJoin(self.current_use_case_object.use_case_files_folder, f"{self.current_use_case_object.use_case_name}.yaml")
 
-                f.write("CRS:\n")
-                f.write(f"  name: {config['CRS']['name']}\n")
-                f.write(f"  definition: {config['CRS']['definition']}\n")
-                f.write("\n")
+            print("DEBUG: Config file will be generated at:", config_path)
 
-                f.write("glide_parameters:\n")
-                for key, value in config['glide_parameters'].items():
-                    f.write(f"  {key}: {int(value)}\n")
-                f.write("\n")
-
-                f.write("calculation_parameters:\n")
-                f.write(
-                    f"  max_altitude: {int(config['calculation_parameters']['max_altitude'])}\n")
-                f.write("\n")
-
-                f.write("rendering:\n")
-                f.write(
-                    f"  contour_height: {int(config['rendering']['contour_height'])}\n")
-                f.write("\n")
-
-                f.write(f"gurumaps: {str(config['gurumaps']).lower()}\n")
-                f.write(
-                    f"exportPasses: {str(config['exportPasses']).lower()}\n")
-                f.write(
-                    f"reset_results: {str(config['reset_results']).lower()}\n")
-                f.write(
-                    f"clean_temporary_files: {str(config['clean_temporary_files']).lower()}\n")
-                f.write("\n")
-
-                f.write(
-                    f"merged_output_name: {config['merged_output_name']}\n")
-
-            # Disable the run button while processing
-            self.run_button.state(['disabled'])
-
-            # Start processing in a separate thread
-            thread = threading.Thread(
-                target=lambda: self.process_data(temp_config_path))
+            # Disable the run button until processing is finished
+            self.run_button.config(state=tk.DISABLED)
+            
+            thread = threading.Thread(target=lambda: self.process_data(config_path))
             thread.daemon = True
             thread.start()
 
@@ -865,6 +745,10 @@ class MountainCirclesGUI:
         """Run the main processing function with stdout/stderr redirected,
         and poll the output queue for messages from worker processes."""
         import queue  # Needed to catch the Empty exception
+
+        print("DEBUG: Starting process_data with config_path:", config_path)
+        if not os.path.exists(config_path):
+            print("DEBUG: WARNING - The config file does not exist at:", config_path)
 
         # Save original stdout and stderr for later restoration
         original_stdout = sys.stdout
@@ -891,7 +775,7 @@ class MountainCirclesGUI:
                 # so stop polling.
                 return
             except Exception as e:
-                print("Error polling output queue:", str(e))
+                print("DEBUG: Error polling output queue:", str(e))
                 return
             # Schedule the next poll in 100ms
             self.root.after(100, poll_queue)
@@ -901,32 +785,29 @@ class MountainCirclesGUI:
 
         try:
             multiprocessing.freeze_support()
+            # Debug: log before launching the processing
+            print("DEBUG: Calling launch.main with config file:", config_path)
             # Pass the shared output_queue to your launch function
             launch.main(config_path, output_queue)
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message
+            print("DEBUG: Exception in process_data:", error_message)
             self.root.after(0, lambda: self.processing_error(error_message))
         finally:
             # Restore the original stdout and stderr
             sys.stdout = original_stdout
             sys.stderr = original_stderr
-            # Clean up the temporary config file if it exists
-            # if os.path.exists(config_path):
-            #     os.remove(config_path)
-            # Shut down the manager; subsequent queue access will raise errors,
-            # but our poll_queue function catches those.
             manager.shutdown()
 
     def processing_complete(self):
         """Called when processing is complete"""
-        self.run_button.state(['!disabled'])
+        # Re-enable the run button
+        self.run_button.config(state=tk.NORMAL)
         print("Success", "Processing completed successfully!")
-        # Launch the map server and open the browser to map.html
-        calc_name=f"{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}-{self.max_altitude.get()}"
-        merge_name = f"{self.merged_output_name}_{self.name.get()}_{self.glide_ratio.get()}-{self.ground_clearance.get()}-{self.circuit_height.get()}.geojson"
-        self.calculation_result_folder = normJoin(self.result_path.get(),calc_name)
-        self.merged_layer_path = normJoin(self.calculation_result_folder,merge_name)
+        
+        self.calculation_result_folder = self.current_use_case_object.calculation_folder_path
+        self.merged_layer_path = self.current_use_case_object.merged_output_filepath
         print(f"on essaie d'ouvrir: {self.merged_layer_path}")
         self.launch_map_server()
 
@@ -1022,9 +903,9 @@ class MountainCirclesGUI:
 
     def processing_error(self, error_message):
         """Called when processing encounters an error"""
-        self.run_button.state(['!disabled'])
-        messagebox.showerror(
-            "Error", f"An error occurred during processing:\n{error_message}")
+        # Re-enable the run button if there's an error
+        self.run_button.config(state=tk.NORMAL)
+        messagebox.showerror("Error", f"An error occurred during processing:\n{error_message}")
 
     def clear_log(self):
         """Clear the status text widget"""
@@ -1032,7 +913,7 @@ class MountainCirclesGUI:
 
     def open_results_folder(self):
         """Open the results folder in the system's file explorer"""
-        result_path = self.result_path.get()
+        result_path = self.use_case_name.get().result_folder
         if not result_path:
             messagebox.showwarning(
                 "Warning", "Please select a result folder first.")
@@ -1131,6 +1012,14 @@ class MountainCirclesGUI:
         original_stdout = sys.stdout
         original_stderr = sys.stderr
 
+        # Debug: Log the parameters for troubleshooting.
+        print("DEBUG: Running process_passes with parameters:")
+        print(f"DEBUG: root_folder: {root_folder}")
+        print(f"DEBUG: input_crs: {input_crs}")
+        print(f"DEBUG: intermediate_path: {intermediate_path}")
+        print(f"DEBUG: mountain_passes_path: {mountain_passes_path}")
+        print(f"DEBUG: output_path: {output_path}")
+
         # Redirect stdout and stderr to the status text widget
         sys.stdout = MountainCirclesGUI.TextRedirector(self.status_text)
         sys.stderr = MountainCirclesGUI.TextRedirector(self.status_text)
@@ -1140,14 +1029,14 @@ class MountainCirclesGUI:
                            mountain_passes_path, output_path)
             # Use after() to schedule GUI updates in the main thread
             self.root.after(0, lambda: (
-                self.status_text.insert(
-                    tk.END, "Passes processed successfully!\n"),
+                self.status_text.insert(tk.END, "Passes processed successfully!\n"),
                 self.status_text.see(tk.END)
             ))
         except Exception as e:
+            error_message = str(e)  # Store the message in a local variable
+            print("DEBUG: Exception encountered in run_process_passes:", error_message)
             self.root.after(0, lambda: (
-                self.status_text.insert(
-                    tk.END, f"Failed to process passes: {str(e)}\n"),
+                self.status_text.insert(tk.END, f"Failed to process passes: {error_message}\n"),
                 self.status_text.see(tk.END)
             ))
         finally:
@@ -1155,29 +1044,125 @@ class MountainCirclesGUI:
             sys.stdout = original_stdout
             sys.stderr = original_stderr
 
-    def load_settings(self):
-        """Load settings from the config file and update variables."""
-        settings = cload_settings()
-        # print(settings)
-        if "user_data_folder" in settings and "calc_script" in settings:
-            self.main_folder.set(settings["user_data_folder"])
-            self.calc_script.set(settings["calc_script"])
-            if self.main_folder.get():
-                print("Loaded data folder:", settings["user_data_folder"])
-                print("Loaded calculation script:", os.path.basename(settings["calc_script"]))
-            if self.main_folder.get() and self.calc_script.get():
-                self.notebook.select(self.run_tab)
-            self.first_contact(self.main_folder.get())
 
     def save_settings(self):
-        """Save current settings to the config file."""
-        settings = {
-            "user_data_folder": self.main_folder.get(),
-            "calc_script": self.calc_script.get(),
-            "config": self.config_folder_path
-        }
-        csave_settings(settings)
-        # print("Saved settings", settings)
+        """Save current settings using AppSettings."""
+        self.app_settings.data_folder_path = self.data_folder_path.get()
+        self.app_settings.calc_script = self.calc_script.get()
+        self.app_settings.region = self.region.get()
+        if hasattr(self, 'use_case_dropdown'):
+            self.app_settings.use_case = self.use_case_dropdown_var.get()
+        self.app_settings.save()
+        print("Saved settings:", {
+            "data_folder_path": self.app_settings.data_folder_path,
+            "calc_script": self.app_settings.calc_script,
+            "region": self.app_settings.region,
+            "use_case": self.app_settings.use_case
+        })
+
+    def on_region_select(self, event):
+        """Callback for when a region is selected in the dropdown."""
+        selected_region = self.region_dropdown.get()
+        if selected_region:
+            self.app_settings.region = selected_region
+            self.region.set(selected_region)
+            # Optionally, update the use case dropdown:
+            self.refresh_use_case_dropdown()
+            # If no use cases exist for the selected region, clear the use case fields.
+            if not self.app_settings.use_cases:
+                self.clear_use_case_fields()
+
+    def get_abs_path(self, path):
+        """
+        Given a file or folder path, return an absolute path based on the data folder.
+        If the given path is already absolute, simply return a normalized version.
+        """
+        if path and not os.path.isabs(path) and self.data_folder_path.get():
+            return os.path.normpath(os.path.join(self.data_folder_path.get(), path))
+        return os.path.normpath(path)
+
+    def init_calc_and_regions(self):
+        self.calc_script.set(self.app_settings.calc_script)
+
+        """Initialize the region dropdown with the available regions from app_settings."""
+        if hasattr(self, 'region_dropdown'):
+            self.region_dropdown['values'] = self.app_settings.regions
+            if self.app_settings.regions:
+                self.region_dropdown.current(0)
+                self.region.set(self.app_settings.regions[0])
+                # Update the region property of app_settings accordingly.
+                self.app_settings.region = self.app_settings.regions[0]
+
+    def on_use_case_select(self, event=None):
+        """Callback when a user selects a saved use case from the dropdown.
+        This loads the saved use case and populates the fields, including updating
+        the checkboxes and the use case name text field.
+        """
+        selected = self.use_case_dropdown_var.get()
+        if not selected:
+            return
+
+        # Update the AppSettings use_case property with the selected value and save the settings.
+        self.app_settings.use_case = selected
+        self.app_settings.save()
+
+        # Construct the path to the use case file.
+        use_case_dir = normJoin(self.data_folder_path.get(), self.region.get(), "use case files")
+        use_case_file = normJoin(use_case_dir, selected)
+        try:
+            loaded_use_case = Use_case(use_case_file=use_case_file)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load use case: {str(e)}")
+            return
+
+        # Populate text and numerical fields from the loaded use case.
+        self.use_case_name.set(loaded_use_case.use_case_name)
+        self.airfield_path.set(loaded_use_case.airfield_file_path)
+        self.glide_ratio.set(str(loaded_use_case.glide_ratio))
+        self.ground_clearance.set(str(loaded_use_case.ground_clearance))
+        self.circuit_height.set(str(loaded_use_case.circuit_height))
+        self.max_altitude.set(str(loaded_use_case.max_altitude))
+        self.contour_height.set(str(loaded_use_case.contour_height))
+
+        # Update the checkboxes.
+        self.gurumaps_styles.set(loaded_use_case.gurumaps_styles)
+        self.export_passes.set(loaded_use_case.exportPasses)
+        self.delete_previous_calculation.set(loaded_use_case.delete_previous_calculation)
+        self.clean_temporary_raster_files.set(loaded_use_case.clean_temporary_raster_files)
+
+        print(f"Loaded use case: {loaded_use_case.use_case_name}")
+
+
+    def refresh_use_case_dropdown(self, active_use_case=None):
+        """Refresh the list of saved use cases in the dropdown.
+
+        This updates the dropdown with filenames or use case names from settings.
+        It does not change the text in the new use case input field (self.use_case_name).
+        """
+        use_cases = self.app_settings.use_cases
+        self.use_case_dropdown['values'] = use_cases
+        if active_use_case and active_use_case in use_cases:
+            # If you want to show the active saved use case in the dropdown, update it.
+            self.use_case_dropdown_var.set(active_use_case)
+        elif use_cases:
+            # Optionally, clear the dropdown selection by setting an empty string:
+            self.clear_use_case_fields()
+
+    def clear_use_case_fields(self):
+        """
+        Clear all fields related to a use case.
+        This way, if no use case is available for the new region,
+        previous data from another region won't remain.
+        """
+        self.use_case_dropdown_var.set("")
+        self.use_case_name.set("")  # the new/editable field for use case name
+        # Optionally clear other fields related to the use case:
+        self.airfield_path.set("")
+        self.glide_ratio.set("")
+        self.ground_clearance.set("")
+        self.circuit_height.set("")
+        self.max_altitude.set("")
+        self.contour_height.set("")
 
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""

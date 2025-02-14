@@ -19,6 +19,7 @@ class Airfields4326:
     def __init__(self, config):
         self.filePath = config.airfield_file_path  
         self.destinationCRS = config.CRS  
+        print(f"DEBUG: Destination CRS: {self.destinationCRS}")
         self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
         csv_to_geojson(config)
 
@@ -49,8 +50,8 @@ def convert_airfields(airfields4326,CRS):
 
 def csv_to_geojson(config):
     # Extract base filename without extension
-    base_filename = config.name
-    output_dir = normJoin(config.result_folder_path, 'airfields')
+    base_filename = config.use_case_name
+    output_dir = normJoin(config.result_folder, 'airfields')
     geojson_file_path = normJoin(output_dir, f"{base_filename}.geojson")
 
     # Ensure the output directory exists

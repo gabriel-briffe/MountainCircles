@@ -143,7 +143,7 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
     This function assumes that you want to merge all features from both GeoJSON files.
     """
     try:
-        geojson_airfields_path = normJoin(config.result_folder_path, "airfields", f"{config.name}.geojson")
+        geojson_airfields_path = normJoin(config.result_folder, "airfields", f"{config.use_case_name}.geojson")
         geojson_contour_path = normJoin(inThisFolder, f'{contourFileName}_noAirfields.geojson')
         merged_geojson_path = normJoin(toThatFolder, f'{contourFileName}.geojson')
 
@@ -204,7 +204,7 @@ def copyMapCss(toThatFolder, config, contourFileName, extension, output_queue=No
 def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName, output_queue=None):
     generate_contours_from_asc(
         inThisFolder, config, ASCfilePath, contourFileName, output_queue)
-    if (config.gurumaps):
-        create4326geosonContours(inThisFolder, config, contourFileName, output_queue)
-        merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, output_queue)
+    create4326geosonContours(inThisFolder, config, contourFileName, output_queue)
+    merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, output_queue)
+    if (config.gurumaps_styles):
         copyMapCss(toThatFolder, config, contourFileName, "", output_queue)

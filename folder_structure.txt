@@ -1,0 +1,22 @@
+#-----------------------FOLDER STRUCTURE---------------------------
+# The following dictionary documents how the folder structure is organized under
+# the data folder. 
+#
+# data_folder_path/
+# ├── Region_1/
+# │   ├── RESULTS/
+# │   │   ├── use_case_1/   
+# │   │   ├── use_case_2/
+# │   │   └── use_case_3/
+# │   │
+# │   ├── airfields/
+# │   ├── configuration files/
+# │   ├── mountain passes public unfiltered/
+# │   ├── topography and CRS/
+# │   └── Guru Map background map/
+# │
+# └── common files/
+#     ├── Guru Map styles/
+#     ├── calculation script/
+#     └── help_files/
+#

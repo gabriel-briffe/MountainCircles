@@ -7,6 +7,7 @@ import sys
 import json
 import os
 import pyproj
+from src.shortcuts import normJoin
 from src.logging import log_output
 
 def read_asc(config):
@@ -36,7 +37,7 @@ def pixel_to_map(contour, xllcorner, yllcorner, cellsize, nrows):
         map_coords.append((x, y))
     return map_coords
 
-def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_attempts=10000, output_queue=None):
+def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_attempts=10000):
     n = len(polygons)
     # Build a graph based on the buffered polygons.
     buffered_polygons = [poly.buffer(buffer_distance) for poly in polygons]
@@ -96,7 +97,7 @@ def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_a
                     colors[node] = fallback_color
     return colors
 
-def main(config, buffer_distance, number_of_colors, simplify_tolerance, output_queue):
+def main(config, buffer_distance, number_of_colors, simplify_tolerance):
 
     grid, dimensions, coords, nodata_value, all_values = read_asc(config)
     ncols, nrows = dimensions
@@ -163,7 +164,7 @@ def main(config, buffer_distance, number_of_colors, simplify_tolerance, output_q
             merged_donut = unary_union(donuts)
             all_donuts.append(merged_donut)
             all_ids.append(int(v))
-    log_output("all sectors vectorized, going to color them", output_queue)
+    print("all sectors vectorized, going to color them")
 
     # Use topological coloring on the merged geometries with custom neighbour selection.
     all_features = []
@@ -188,24 +189,25 @@ def main(config, buffer_distance, number_of_colors, simplify_tolerance, output_q
     }
     with open(config.sectors1_filepath, "w") as f:
         json.dump(geojson, f, indent=2)
-    log_output(f"Sectors saved to {config.sectors1_filepath}", output_queue)
+    print(f"Sectors saved to {config.sectors1_filepath}")
 
     # copy out_file to config.sectors2_filepath
     shutil.copy(config.sectors1_filepath, config.sectors2_filepath)
-    log_output(f"Sectors saved to {config.sectors2_filepath}", output_queue)
+    print(f"Sectors saved to {config.sectors2_filepath}")
 
         # copy config.sector1_style_path and config.sector2_style_path to sectors1_style_filepath and sectors2_style_filepath
-    if config.gurumaps:    
+    if config.gurumaps_styles:    
         shutil.copy(config.sector1_style_path, config.sectors1_style_filepath)
         shutil.copy(config.sector2_style_path, config.sectors2_style_filepath)
-        log_output(f"Sectors style files saved to {config.sectors1_style_filepath} and {config.sectors2_style_filepath}", output_queue)
+        print(f"Sectors style files saved to {config.sectors1_style_filepath} and {config.sectors2_style_filepath}")
 
     #move sectors.asc to sector_raster/config.sectors_name.asc
-    sectors_raster_folder = os.path.join(config.calculation_folder_path, "sector_raster")
+    print(f"moving sectors.asc to sector_raster/{config.sectors_name}.asc")
+    sectors_raster_folder = normJoin(config.calculation_folder_path, "sector_raster")
     if not os.path.exists(sectors_raster_folder):
         os.makedirs(sectors_raster_folder)
-    shutil.move(config.sectors_filepath, os.path.join(sectors_raster_folder, config.sectors_filename))
-    log_output(f"Sectors raster moved to {os.path.join(sectors_raster_folder, config.sectors_filename)}", output_queue)
+    shutil.move(config.sectors_filepath, normJoin(sectors_raster_folder, config.sectors_filename))
+    print(f"Sectors raster moved to {normJoin(sectors_raster_folder, config.sectors_filename)}")
 
 
 if __name__ == "__main__":

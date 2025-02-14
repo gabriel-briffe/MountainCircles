@@ -1,0 +1,17 @@
+use_case_name:  three
+airfield_file:
+topography_file:
+CRS_file:
+use_case_result_folder:
+calculation_script:
+gurumaps_styles:
+glide_ratio: 
+ground_clearance: 
+circuit_height: 
+max_altitude: 
+contour_height: 
+reset_results: 
+gurumaps: 
+exportPasses: 
+clean_temporary_files: 
+merged_prefix: aa
