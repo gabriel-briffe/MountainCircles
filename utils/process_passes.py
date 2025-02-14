@@ -29,7 +29,7 @@ def collect_and_merge_csv_files(root_folder):
             # Convert file extension to lower case for a case-insensitive match.
             if file.lower().endswith('.csv'):
                 file_path = normJoin(root, file)
-                print(f"DEBUG: Found CSV file: {file_path}")  # Debug statement
+                # print(f"DEBUG: Found CSV file: {file_path}")  # Debug statement
                 try:
                     df = pd.read_csv(file_path)
                     dfs.append(df)

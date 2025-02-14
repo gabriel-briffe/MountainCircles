@@ -176,49 +176,6 @@ class Use_case:
     def isInside(self,x,y):
         return (self.minx<= x <= self.maxx) and (self.miny<= y <= self.maxy)
 
-
-    # @property
-    # def use_case_files_folder(self):
-    #     """Returns the folder where use case YAML files are stored:
-    #     data_folder_path/region/use case files/"""
-    #     return normJoin(self.data_folder_path, self.region, "use case files")
-
-    # @property
-    # def topography_and_crs_folder(self):
-    #     """Returns the folder for topography and CRS files:
-    #     data_folder_path/region/topography and CRS/"""
-    #     return normJoin(self.data_folder_path, self.region, "topography and CRS")
-
-    # @property
-    # def airfields_folder(self):
-    #     """Returns the folder for airfields:
-    #     data_folder_path/region/airfields/"""
-    #     return normJoin(self.data_folder_path, self.region, "airfields")
-
-    # @property
-    # def calc_script_folder(self):
-    #     """Returns the folder for the calculation script:
-    #     data_folder_path/common files/calculation script/"""
-    #     return normJoin(self.data_folder_path, "common files", "calculation script")
-
-    # @property
-    # def result_folder(self):
-    #     """Returns the results folder for this use case:
-    #     data_folder_path/region/RESULTS/use_case_name"""
-    #     path = normJoin(self.data_folder_path, self.region, "RESULTS", self.use_case_name)
-    #     print(f"[DEBUG] Accessing result folder property: {path}")
-    #     return path
-
-    # @property
-    # def calculation_folder_path(self):
-    #     """
-    #     For backward compatibility: returns the folder where calculation-specific files are stored.
-    #     This is composed by joining the result_folder with the calculated calculation_name.
-    #     """
-    #     calc_folder = normJoin(self.result_folder, self.calculation_name)
-    #     if not os.path.exists(calc_folder):
-    #         os.makedirs(calc_folder, exist_ok=True)
-    #     return calc_folder
     
     def create_calculation_folder(self):
         dir_path = normJoin(self.result_folder ,self.calculation_name)
@@ -253,33 +210,33 @@ class Use_case:
         """
         # Ensure that the use case files folder exists:
         use_case_dir = self.use_case_files_folder
-        print(f"[DEBUG] Use case directory: {use_case_dir}")
+        # print(f"[DEBUG] Use case directory: {use_case_dir}")
         if not os.path.exists(use_case_dir):
-            print(f"[DEBUG] Directory does not exist. Creating: {use_case_dir}")
+            # print(f"[DEBUG] Directory does not exist. Creating: {use_case_dir}")
             os.makedirs(use_case_dir, exist_ok=True)
 
         # Construct the filename using the use_case_name (add .yaml extension)
         file_name = f"{self.use_case_name}.yaml"
         file_path = normJoin(use_case_dir, file_name)
-        print(f"[DEBUG] Use case YAML file will be saved as: {file_path}")
+        # print(f"[DEBUG] Use case YAML file will be saved as: {file_path}")
 
         # Auto-deduce topography and CRS files from topography_and_crs_folder
         topo_crs_folder = self.topography_and_crs_folder
-        print(f"[DEBUG] Looking for topography and CRS files in: {topo_crs_folder}")
+        # print(f"[DEBUG] Looking for topography and CRS files in: {topo_crs_folder}")
         self.topography_file = ""
         self.crs_file = ""
         if os.path.exists(topo_crs_folder):
             for fname in os.listdir(topo_crs_folder):
                 fpath = normJoin(topo_crs_folder, fname)
-                print(f"[DEBUG] Checking file: {fpath}")
+                # print(f"[DEBUG] Checking file: {fpath}")
                 if os.path.isfile(fpath):
                     lower_fname = fname.lower()
                     if lower_fname.endswith('.asc'):
                         self.topography_file = fpath
-                        print(f"[DEBUG] Found topography file: {fpath}")
+                        # print(f"[DEBUG] Found topography file: {fpath}")
                     elif lower_fname.endswith('.txt'):
                         self.crs_file = fpath
-                        print(f"[DEBUG] Found CRS file: {fpath}")
+                        # print(f"[DEBUG] Found CRS file: {fpath}")
         else:
             print(f"[DEBUG] Folder does not exist: {topo_crs_folder}")
 
@@ -289,7 +246,7 @@ class Use_case:
 
         # Determine the result folder location for this use case.
         result_folder = normJoin(self.data_folder_path, self.region, "RESULTS", self.use_case_name)
-        print(f"[DEBUG] Result folder is set to: {result_folder}")
+        # print(f"[DEBUG] Result folder is set to: {result_folder}")
 
         # Prepare the configuration dictionary.
         config_dict = {
@@ -316,44 +273,8 @@ class Use_case:
         try:
             with open(file_path, "w") as file:
                 yaml.safe_dump(config_dict, file, default_flow_style=False)
-            print(f"[DEBUG] Saved Use_case file: {file_path}")
+            # print(f"[DEBUG] Saved Use_case file: {file_path}")
         except Exception as e:
             print(f"[DEBUG] Error saving Use_case file: {e}")
 
-    # @property
-    # def crs_file_path(self):
-    #     """
-    #     Returns the stored CRS file path.
-    #     """
-    #     return self._crs_file_path
-
-    # @crs_file_path.setter
-    # def crs_file_path(self, path):
-    #     """
-    #     Sets the CRS file path and reads the first line of the file to set the 'crs' property.
-    #     """
-    #     self._crs_file_path = path
-    #     try:
-    #         with open(path, "r") as f:
-    #             first_line = f.readline().strip()
-    #         self.crs = first_line
-    #         print(f"[DEBUG] Loaded CRS from '{path}': {first_line}")
-    #     except Exception as e:
-    #         print(f"[DEBUG] Error reading CRS file '{path}': {e}")
-    #         self.crs = None
-
-    # @property
-    # def crs(self):
-    #     """
-    #     Returns the CRS extracted from the CRS file.
-    #     """
-    #     return self._crs
-
-    # @crs.setter
-    # def crs(self, value):
-    #     """
-    #     Sets the CRS property.
-    #     """
-    #     self._crs = value
-    #     print(f"[DEBUG] Setting crs property to: {value}")
-
+   

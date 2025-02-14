@@ -36,8 +36,8 @@ class MountainCirclesGUI:
                 pass
         
         temp_redirector = BufferRedirector(self._log_buffer)
-        # sys.stdout = temp_redirector
-        # sys.stderr = temp_redirector
+        sys.stdout = temp_redirector
+        sys.stderr = temp_redirector
         
         # Variables to store settings
         self.data_folder_path = tk.StringVar(value="")
@@ -309,6 +309,11 @@ class MountainCirclesGUI:
             control_btn_frame, text="Open Results Folder", command=self.open_results_folder)
         self.open_results_button.pack(side=tk.LEFT, padx=5)
 
+        # Added new "View Map" button – initially disabled until processing is complete.
+        self.view_map_button = ttk.Button(control_btn_frame, text="View Map", command=self.view_map)
+        self.view_map_button.pack(side=tk.LEFT, padx=5)
+        self.view_map_button.config(state=tk.DISABLED)
+        
         # Status display area
         ttk.Label(main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(
             row=15, column=0, sticky="w", pady=5)
@@ -601,7 +606,7 @@ class MountainCirclesGUI:
                 "clean_temporary_raster_files": self.clean_temporary_raster_files.get(),
             }
 
-            print("[DEBUG] Use case parameters:", params)
+            # print("[DEBUG] Use case parameters:", params)
 
             # Create the Use_case object using parameters.
             use_case_obj = Use_case(params=params)
@@ -719,7 +724,7 @@ class MountainCirclesGUI:
                 "clean_temporary_raster_files": self.clean_temporary_raster_files.get(),
             }
 
-            print("DEBUG: run_processing parameters:", params)
+            # print("DEBUG: run_processing parameters:", params)
 
             # Create and save the use case using the Use_case class
             self.current_use_case_object = Use_case(params=params)
@@ -728,7 +733,7 @@ class MountainCirclesGUI:
             # Retrieve the path of the newly created YAML file from the Use_case helper property
             config_path = normJoin(self.current_use_case_object.use_case_files_folder, f"{self.current_use_case_object.use_case_name}.yaml")
 
-            print("DEBUG: Config file will be generated at:", config_path)
+            # print("DEBUG: Config file will be generated at:", config_path)
 
             # Disable the run button until processing is finished
             self.run_button.config(state=tk.DISABLED)
@@ -745,9 +750,9 @@ class MountainCirclesGUI:
         and poll the output queue for messages from worker processes."""
         import queue  # Needed to catch the Empty exception
 
-        print("DEBUG: Starting process_data with config_path:", config_path)
-        if not os.path.exists(config_path):
-            print("DEBUG: WARNING - The config file does not exist at:", config_path)
+        # print("DEBUG: Starting process_data with config_path:", config_path)
+        # if not os.path.exists(config_path):
+            # print("DEBUG: WARNING - The config file does not exist at:", config_path)
 
         # Save original stdout and stderr for later restoration
         original_stdout = sys.stdout
@@ -774,7 +779,7 @@ class MountainCirclesGUI:
                 # so stop polling.
                 return
             except Exception as e:
-                print("DEBUG: Error polling output queue:", str(e))
+                # print("DEBUG: Error polling output queue:", str(e))
                 return
             # Schedule the next poll in 100ms
             self.root.after(100, poll_queue)
@@ -785,13 +790,13 @@ class MountainCirclesGUI:
         try:
             multiprocessing.freeze_support()
             # Debug: log before launching the processing
-            print("DEBUG: Calling launch.main with config file:", config_path)
+            # print("DEBUG: Calling launch.main with config file:", config_path)
             # Pass the shared output_queue to your launch function
             launch.main(config_path, output_queue)
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message
-            print("DEBUG: Exception in process_data:", error_message)
+            # print("DEBUG: Exception in process_data:", error_message)
             self.root.after(0, lambda: self.processing_error(error_message))
         finally:
             # Restore the original stdout and stderr
@@ -856,6 +861,7 @@ class MountainCirclesGUI:
         else:
             print(f"Merged layer path: {merged_layer_path}")
 
+
         # If merged_layer_path is absolute, copy it into the result folder and use its basename.
         if os.path.isabs(merged_layer_path):
             geojson_filename = os.path.basename(merged_layer_path)
@@ -869,14 +875,23 @@ class MountainCirclesGUI:
                     return
             merged_layer_path = geojson_filename
 
-        # Open the original map.html, replace the placeholder with merged_layer_path,
-        # and write the updated file into the result folder.
+        # Merge the two HTML updates into one.
+        # First, get the map bounds and then update the HTML file from the original map.html template.
         try:
+            minx, miny, maxx, maxy = self.get_bounds()
             with open(orig_map_path, 'r') as f:
                 content = f.read()
-            modified_content = content.replace("nameToReplace", merged_layer_path)
+
+            # Replace the placeholder for bounds.
+            content = content.replace("[[minx, miny], [maxx, maxy]]",
+                                      f"[[{minx}, {miny}], [{maxx}, {maxy}]]")
+
+            # Replace the placeholder for the merged layer file.
+            content = content.replace("nameToReplace", merged_layer_path)
+
+            # Write the updated content once.
             with open(dest_map_path, 'w') as f:
-                f.write(modified_content)
+                f.write(content)
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update map.html: {str(e)}")
             return
@@ -1012,12 +1027,12 @@ class MountainCirclesGUI:
         original_stderr = sys.stderr
 
         # Debug: Log the parameters for troubleshooting.
-        print("DEBUG: Running process_passes with parameters:")
-        print(f"DEBUG: root_folder: {root_folder}")
-        print(f"DEBUG: input_crs: {input_crs}")
-        print(f"DEBUG: intermediate_path: {intermediate_path}")
-        print(f"DEBUG: mountain_passes_path: {mountain_passes_path}")
-        print(f"DEBUG: output_path: {output_path}")
+        # print("DEBUG: Running process_passes with parameters:")
+        # print(f"DEBUG: root_folder: {root_folder}")
+        # print(f"DEBUG: input_crs: {input_crs}")
+        # print(f"DEBUG: intermediate_path: {intermediate_path}")
+        # print(f"DEBUG: mountain_passes_path: {mountain_passes_path}")
+        # print(f"DEBUG: output_path: {output_path}")
 
         # Redirect stdout and stderr to the status text widget
         sys.stdout = MountainCirclesGUI.TextRedirector(self.status_text)
@@ -1033,7 +1048,7 @@ class MountainCirclesGUI:
             ))
         except Exception as e:
             error_message = str(e)  # Store the message in a local variable
-            print("DEBUG: Exception encountered in run_process_passes:", error_message)
+            # print("DEBUG: Exception encountered in run_process_passes:", error_message)
             self.root.after(0, lambda: (
                 self.status_text.insert(tk.END, f"Failed to process passes: {error_message}\n"),
                 self.status_text.see(tk.END)
@@ -1096,6 +1111,10 @@ class MountainCirclesGUI:
         """Callback when a user selects a saved use case from the dropdown.
         This loads the saved use case and populates the fields, including updating
         the checkboxes and the use case name text field.
+        
+        Also, if the loaded use case already has a calculation result (i.e. if the
+        use case provides a calculation result folder and a merged output file that exist on disk),
+        the 'View Map' button is enabled. Otherwise, it is disabled.
         """
         selected = self.use_case_dropdown_var.get()
         if not selected:
@@ -1128,6 +1147,25 @@ class MountainCirclesGUI:
         self.export_passes.set(loaded_use_case.exportPasses)
         self.delete_previous_calculation.set(loaded_use_case.delete_previous_calculation)
         self.clean_temporary_raster_files.set(loaded_use_case.clean_temporary_raster_files)
+
+        # If the loaded use case contains previous calculation results, set the corresponding attributes.
+        if hasattr(loaded_use_case, 'calculation_folder_path'):
+            self.calculation_result_folder = loaded_use_case.calculation_folder_path
+        else:
+            self.calculation_result_folder = None
+
+        if hasattr(loaded_use_case, 'merged_output_filepath'):
+            self.merged_layer_path = loaded_use_case.merged_output_filepath
+        else:
+            self.merged_layer_path = None
+
+        # Verify that the calculation result folder exists and that the merged output file exists,
+        # then enable the "View Map" button accordingly.
+        if (self.calculation_result_folder and os.path.exists(self.calculation_result_folder) and
+            self.merged_layer_path and os.path.exists(self.merged_layer_path)):
+            self.view_map_button.config(state=tk.NORMAL)
+        else:
+            self.view_map_button.config(state=tk.DISABLED)
 
         print(f"Loaded use case: {loaded_use_case.use_case_name}")
 
@@ -1163,6 +1201,21 @@ class MountainCirclesGUI:
         self.max_altitude.set("")
         self.contour_height.set("")
 
+    def view_map(self):
+        """View the map of the current use case if a calculation has been done.
+        
+        If the calculation results exist (i.e. processing has been run and 
+        both result folder and merged layer path have been set), then 
+        launch_map_server() is called. Otherwise, notify the user.
+        """
+        if (hasattr(self, "calculation_result_folder") and self.calculation_result_folder and
+            hasattr(self, "merged_layer_path") and self.merged_layer_path):
+            self.launch_map_server()
+        else:
+            messagebox.showinfo("No Calculation",
+                                "No calculation has been done for the current use case.\n"
+                                "Please run processing first.")
+
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""
 
@@ -1177,6 +1230,15 @@ class MountainCirclesGUI:
         def flush(self):
             pass
 
+    def get_bounds(self):
+        #open airfield csv file and get minx, miny, maxx, maxy
+        airfield_path = self.airfield_path.get()
+        df = pd.read_csv(airfield_path)
+        minx = df['x'].min()
+        miny = df['y'].min()
+        maxx = df['x'].max()
+        maxy = df['y'].max()
+        return minx, miny, maxx, maxy
 
 def main():
     root = tk.Tk()

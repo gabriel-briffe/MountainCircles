@@ -19,7 +19,7 @@ class Airfields4326:
     def __init__(self, config):
         self.filePath = config.airfield_file_path  
         self.destinationCRS = config.CRS  
-        print(f"DEBUG: Destination CRS: {self.destinationCRS}")
+        # print(f"DEBUG: Destination CRS: {self.destinationCRS}")
         self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
         csv_to_geojson(config)
 

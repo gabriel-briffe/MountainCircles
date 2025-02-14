@@ -17,16 +17,16 @@ from utils import process_sectors
 
 
 def make_individuals(airfield, config, output_queue=None):
-    print("DEBUG: In make_individuals. Airfield object:", airfield)
-    print("DEBUG: Airfield type:", type(airfield))
+    # print("DEBUG: In make_individuals. Airfield object:", airfield)
+    # print("DEBUG: Airfield type:", type(airfield))
     try:
         airfield_name = getattr(airfield, 'name', None)
-        print("DEBUG: Retrieved airfield.name:", airfield_name)
+        # print("DEBUG: Retrieved airfield.name:", airfield_name)
     except Exception as e:
         print("DEBUG: Exception when accessing airfield.name:", e)
 
-    print("DEBUG: Airfield coordinates: x =", getattr(airfield, 'x', 'N/A'),
-          "y =", getattr(airfield, 'y', 'N/A'))
+    # # print("DEBUG: Airfield coordinates: x =", getattr(airfield, 'x', 'N/A'),
+    #     #   "y =", getattr(airfield, 'y', 'N/A'))
 
     if not config.isInside(airfield.x, airfield.y):
         log_output(
@@ -42,7 +42,7 @@ def make_individuals(airfield, config, output_queue=None):
 
         # Check if the output file already exists, if so, skip processing
         ASCfile = normJoin(airfield_folder, 'local.asc')
-        log_output(f"ascII file : {ASCfile}", output_queue)
+        # log_output(f"ascII file : {ASCfile}", output_queue)
         if os.path.exists(ASCfile):
             log_output(
                 f"Output file already exists for {airfield.name}, skipping this airfield.", output_queue)
@@ -63,7 +63,7 @@ def make_individuals(airfield, config, output_queue=None):
             str(config.max_altitude), str(
                 airfield_folder), config.topography_file_path, str(config.exportPasses).lower()
         ]
-        print("DEBUG: Running command:", command)
+        # print("DEBUG: Running command:", command)
         result = subprocess.run(command, check=True,
                                 text=True, capture_output=True)
 
@@ -145,12 +145,12 @@ def clean(config):
 
 
 def main(use_case_file, output_queue=None):
-    print("DEBUG: Entering launch.main with use_case_file:", use_case_file)
+    # print("DEBUG: Entering launch.main with use_case_file:", use_case_file)
     start_time = time.time()
 
     # Load the new use case settings from the YAML file.
     use_case = Use_case(use_case_file=use_case_file)
-    print("DEBUG: Use_case loaded:")
+    # print("DEBUG: Use_case loaded:")
     print(f"  calculation_script: {use_case.calculation_script}")
     print(f"  calculation_folder_path: {use_case.calculation_folder_path}")
     print(f"  airfield_file: {use_case.airfield_file_path}")
@@ -160,7 +160,7 @@ def main(use_case_file, output_queue=None):
 
     # Load the airfields file using the new use_case settings
     converted_airfields = Airfields4326(use_case).convertedAirfields
-    print("DEBUG: Number of airfields loaded:", len(converted_airfields))
+    # print("DEBUG: Number of airfields loaded:", len(converted_airfields))
 
     # Use multiprocessing to make individual files for each airfield
     with multiprocessing.Pool() as pool:
