@@ -887,6 +887,8 @@ class MountainCirclesGUI:
             content = content.replace("sectorsPlaceHolder", sectors_file_path)
             print(f"Sectors file path: {sectors_file_path}")
 
+            content = content.replace("parametersPlaceholder", f"L/D {self.current_use_case_object.glide_ratio} - Ground {self.current_use_case_object.ground_clearance}m - Circuit Height {self.current_use_case_object.circuit_height}m")
+
             # Write the updated content once.
             with open(dest_map_path, 'w') as f:
                 f.write(content)
