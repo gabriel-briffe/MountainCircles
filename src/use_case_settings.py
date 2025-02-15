@@ -9,15 +9,6 @@ def load_(filename):
         return yaml.safe_load(file)
 
 
-def clean(path):
-    try:
-        if os.path.exists(path):
-            shutil.rmtree(path)
-            print(f"deleted {path}")
-    except Exception as e:
-        print(
-            f"An error occurred while trying to delete the directory {path}: {e}"
-        )
 
 
 class Use_case:
@@ -67,7 +58,7 @@ class Use_case:
         self.calculation_name = f"{self.glide_ratio}-{self.ground_clearance}-{self.circuit_height}-{self.max_altitude}"
         self.use_case_files_folder = normJoin(self.data_folder_path, self.region, "use case files")
         self.calculation_folder_path = self.create_calculation_folder()
-        if self.delete_previous_calculation: clean(self.calculation_folder_path)
+        # if self.delete_previous_calculation: clean(self.calculation_folder_path)
         self.merged_output_name = f"{combined_name}_{self.calculation_name_short}"
         self.merged_output_raster_path = normJoin(self.calculation_folder_path,f'{self.merged_output_name}.asc') #/Users/gabrielbriffe/Downloads/MountainCircles/Alps/---RESULTS---/three/20-100-250_4200/aa_alps_20-100-250.asc
         self.merged_output_filename = f"{self.merged_output_name}.geojson" #aa_alps_20-100-250.geojson  
@@ -119,6 +110,16 @@ class Use_case:
         #     ├── Guru Map styles/
         #     ├── calculation script/
         #     └── help_files/
+    def clean(self):
+        try:
+            if os.path.exists(self.calculation_folder_path):
+                shutil.rmtree(self.calculation_folder_path)
+            print(f"deleted {self.calculation_folder_path}")
+        except Exception as e:
+            print(
+                f"An error occurred while trying to delete the directory {self.calculation_folder_path}: {e}"
+            )
+
 
     def find_crs_file(self,):
         try:

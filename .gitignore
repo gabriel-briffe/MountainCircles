@@ -17,3 +17,5 @@
 /mc
 *.asc
 *.geojson
+/cache
+**/*.mbtiles

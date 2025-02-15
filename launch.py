@@ -46,7 +46,7 @@ def make_individuals(airfield, config, output_queue=None):
         if os.path.exists(ASCfile):
             log_output(
                 f"Output file already exists for {airfield.name}, skipping this airfield.", output_queue)
-            log_output(f"Checking ASCfile path: {ASCfile}", output_queue)
+            # log_output(f"Checking ASCfile path: {ASCfile}", output_queue)
             return
 
         # Ensure the computation executable exists
@@ -157,6 +157,9 @@ def main(use_case_file, output_queue=None):
     print(f"  topography_file: {use_case.topography_file_path}")
     print(f"  merged_prefix: {use_case.merged_prefix}")
     print(f"  exportPasses: {use_case.exportPasses}")
+
+    if use_case.delete_previous_calculation:
+        use_case.clean()
 
     # Load the airfields file using the new use_case settings
     converted_airfields = Airfields4326(use_case).convertedAirfields

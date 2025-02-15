@@ -621,44 +621,44 @@ class MountainCirclesGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save use case: {str(e)}")
 
-    def create_use_case_dict(self):
-        """Create a dictionary with current parameters to save as a use case."""
-        from collections import OrderedDict
+    # def create_use_case_dict(self):
+    #     """Create a dictionary with current parameters to save as a use case."""
+    #     from collections import OrderedDict
 
-        use_case = OrderedDict([
-            ("use_case_name", self.use_case.get()),
-            ("region", self.region.get()),
-            ("input_files", OrderedDict([
-                ("airfield_file", self.get_abs_path(self.airfield_path.get())),
-                ("topography_file", self.get_abs_path(self.topo_path.get())),
-                ("CRS_file", self.get_abs_path(self.topo_CRSfile_path.get())),
-                ("result_folder", self.get_abs_path(self.result_path.get())),
-                ("compute", self.get_abs_path(self.calc_script.get())),
-                ("mapcssTemplate", self.get_abs_path(normJoin(self.GMstyles_folder_path, "circlesAndAirfields.mapcss")))
-            ])),
-            ("CRS", OrderedDict([
-                ("name", "custom"),
-                ("definition", self.input_crs)
-            ])),
-            ("glide_parameters", OrderedDict([
-                ("glide_ratio", float(self.glide_ratio.get())),
-                ("ground_clearance", float(self.ground_clearance.get())),
-                ("circuit_height", float(self.circuit_height.get()))
-            ])),
-            ("calculation_parameters", OrderedDict([
-                ("max_altitude", float(self.max_altitude.get()))
-            ])),
-            ("rendering", OrderedDict([
-                ("contour_height", int(self.contour_height.get()))
-            ])),
-            ("gurumaps_styles", self.gurumaps_styles.get()),
-            ("exportPasses", self.export_passes.get()),
-            ("delete_previous_calculation", self.delete_previous_calculation.get()),
-            ("clean_temporary_raster_files", self.clean_temporary_raster_files.get()),
-            ("merged_output_name", self.merged_output_name)
-        ])
+    #     use_case = OrderedDict([
+    #         ("use_case_name", self.use_case.get()),
+    #         ("region", self.region.get()),
+    #         ("input_files", OrderedDict([
+    #             ("airfield_file", self.get_abs_path(self.airfield_path.get())),
+    #             ("topography_file", self.get_abs_path(self.topo_path.get())),
+    #             ("CRS_file", self.get_abs_path(self.topo_CRSfile_path.get())),
+    #             ("result_folder", self.get_abs_path(self.result_path.get())),
+    #             ("compute", self.get_abs_path(self.calc_script.get())),
+    #             ("mapcssTemplate", self.get_abs_path(normJoin(self.GMstyles_folder_path, "circlesAndAirfields.mapcss")))
+    #         ])),
+    #         ("CRS", OrderedDict([
+    #             ("name", "custom"),
+    #             ("definition", self.input_crs)
+    #         ])),
+    #         ("glide_parameters", OrderedDict([
+    #             ("glide_ratio", float(self.glide_ratio.get())),
+    #             ("ground_clearance", float(self.ground_clearance.get())),
+    #             ("circuit_height", float(self.circuit_height.get()))
+    #         ])),
+    #         ("calculation_parameters", OrderedDict([
+    #             ("max_altitude", float(self.max_altitude.get()))
+    #         ])),
+    #         ("rendering", OrderedDict([
+    #             ("contour_height", int(self.contour_height.get()))
+    #         ])),
+    #         ("gurumaps_styles", self.gurumaps_styles.get()),
+    #         ("exportPasses", self.export_passes.get()),
+    #         ("delete_previous_calculation", self.delete_previous_calculation.get()),
+    #         ("clean_temporary_raster_files", self.clean_temporary_raster_files.get()),
+    #         ("merged_output_name", self.merged_output_name)
+    #     ])
 
-        return use_case
+    #     return use_case
 
     def validate_inputs(self):
         """Validate all input fields"""
@@ -671,10 +671,10 @@ class MountainCirclesGUI:
 
         # Validate numeric inputs
         try:
-            float(self.glide_ratio.get())
-            float(self.ground_clearance.get())
-            float(self.circuit_height.get())
-            float(self.max_altitude.get())
+            int(self.glide_ratio.get())
+            int(self.ground_clearance.get())
+            int(self.circuit_height.get())
+            int(self.max_altitude.get())
 
         except ValueError:
             raise ValueError("All numeric parameters must be valid numbers")
@@ -694,6 +694,18 @@ class MountainCirclesGUI:
         Instead of manually generating the YAML configuration,
         we now gather parameters and let the Use_case class handle path generation and saving.
         """
+        # Shut down any previously running HTTP server before starting new processing
+        if hasattr(self, 'httpd') and self.httpd:
+            try:
+                print("Shutting down previous HTTP server before starting new processing...")
+                self.httpd.shutdown()
+                self.httpd.server_close()
+                self.server_thread.join(timeout=5)
+            except Exception as e:
+                print("Error shutting down previous server:", e)
+            finally:
+                self.httpd = None
+
         try:
             # Check for required fields (update field names as needed)
             missing_fields = []
@@ -812,7 +824,7 @@ class MountainCirclesGUI:
         
         self.calculation_result_folder = self.current_use_case_object.calculation_folder_path
         self.merged_layer_path = self.current_use_case_object.merged_output_filepath
-        print(f"on essaie d'ouvrir: {self.merged_layer_path}")
+        # print(f"on essaie d'ouvrir: {self.merged_layer_path}")
         self.launch_map_server()
 
     def launch_map_server(self):

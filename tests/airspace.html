@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OpenAIP Airspace with MapLibre GL JS</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        html, body, #map { height: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Initialize the map
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://demotiles.maplibre.org/style.json', // Base map style
+            center: [8.5456, 47.3739], // Initial center (Zurich, Switzerland)
+            zoom: 8
+        });
+
+        // Add OpenAIP airspace layers after the map loads
+        map.on('load', () => {
+            // Add airspace source (vector tiles from OpenAIP)
+            map.addSource('openaip-airspaces', {
+                type: 'vector',
+                tiles: [
+                    'https://a.api.tiles.openaip.net/api/data/airspaces/{z}/{x}/{y}.pbf?apiKey=f873030a9e00340ffcf030130f4dc378',
+                    'https://b.api.tiles.openaip.net/api/data/airspaces/{z}/{x}/{y}.pbf?apiKey=f873030a9e00340ffcf030130f4dc378',
+                    'https://c.api.tiles.openaip.net/api/data/airspaces/{z}/{x}/{y}.pbf?apiKey=f873030a9e00340ffcf030130f4dc378'
+                ],
+                minzoom: 0,
+                maxzoom: 14
+            });
+
+            // Add airspace layer with styling
+            map.addLayer({
+                'id': 'airspaces',
+                'type': 'fill',
+                'source': 'openaip-airspaces',
+                'source-layer': 'airspaces',
+                'paint': {
+                    'fill-color': [
+                        'match',
+                        ['get', 'category'],
+                        'A', 'rgba(255, 0, 0, 0.3)',     // Class A - Red
+                        'B', 'rgba(255, 165, 0, 0.3)',   // Class B - Orange
+                        'C', 'rgba(255, 255, 0, 0.3)',   // Class C - Yellow
+                        'D', 'rgba(0, 255, 0, 0.3)',     // Class D - Green
+                        'E', 'rgba(0, 0, 255, 0.3)',     // Class E - Blue
+                        'F', 'rgba(128, 0, 128, 0.3)',   // Class F - Purple
+                        'G', 'rgba(255, 192, 203, 0.3)', // Class G - Pink
+                        'rgba(128, 128, 128, 0.3)'       // Default - Gray
+                    ],
+                    'fill-opacity': 0.5
+                }
+            });
+
+            // Add airspace borders
+            map.addLayer({
+                'id': 'airspace-borders',
+                'type': 'line',
+                'source': 'openaip-airspaces',
+                'source-layer': 'airspaces',
+                'paint': {
+                    'line-color': [
+                        'match',
+                        ['get', 'category'],
+                        'A', '#FF0000',
+                        'B', '#FFA500',
+                        'C', '#FFFF00',
+                        'D', '#00FF00',
+                        'E', '#0000FF',
+                        'F', '#800080',
+                        'G', '#FFC0CB',
+                        '#808080'
+                    ],
+                    'line-width': 1,
+                    'line-opacity': 0.7
+                }
+            });
+
+            // Add airspace labels
+            map.addLayer({
+                'id': 'airspace-labels',
+                'type': 'symbol',
+                'source': 'openaip-airspaces',
+                'source-layer': 'airspaces',
+                'layout': {
+                    'text-field': [
+                        'concat',
+                        ['get', 'name'],
+                        '\n',
+                        ['get', 'category']
+                    ],
+                    'text-size': 12,
+                    'text-anchor': 'center'
+                },
+                'paint': {
+                    'text-color': '#000000',
+                    'text-halo-color': '#FFFFFF',
+                    'text-halo-width': 1
+                }
+            });
+        });
+
+        // Add navigation controls
+        map.addControl(new maplibregl.NavigationControl());
+    </script>
+</body>
+</html>
