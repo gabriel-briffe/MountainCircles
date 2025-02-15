@@ -47,6 +47,11 @@
         <input type="file" id="igcFileInput" accept=".igc" style="display: none;">
     </div>
 
+    <!-- Transparent Loading/Connection Message on Top of the Map -->
+    <div id="loadingMessage" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255,255,255,0.8); padding: 10px 20px; border-radius: 3px; font-family: sans-serif; display: none;">
+        Loading files, please wait...
+    </div>
+
     <div id="map"></div>
 
     <!-- Transparent Box on Bottom Left with Big Bold Text -->
@@ -142,6 +147,37 @@
 
         // Start with the Thunderforest style
         let currentStyle = thunderforestStyle;
+
+        // Function to show the loading message with a given text.
+        function showLoadingMessage(text) {
+            const messageDiv = document.getElementById('loadingMessage');
+            messageDiv.textContent = text;
+            messageDiv.style.display = "block";
+        }
+
+        // Function to hide the loading message.
+        function hideLoadingMessage() {
+            document.getElementById('loadingMessage').style.display = "none";
+        }
+
+        // --- Connection Message Logic ---
+        // Function to update the message based solely on the network status.
+        function updateConnectionMessage() {
+            const messageDiv = document.getElementById('loadingMessage');
+            if (!navigator.onLine) {
+                messageDiv.textContent = "No internet connection. Please connect to the internet.";
+                messageDiv.style.display = "block";
+            } else {
+                messageDiv.style.display = "none";
+            }
+        }
+
+        // Initial check
+        updateConnectionMessage();
+
+        // Listen for connectivity changes
+        window.addEventListener('offline', updateConnectionMessage);
+        window.addEventListener('online', updateConnectionMessage);
 
         // Initialize the map
         const map = new maplibregl.Map({
@@ -286,9 +322,14 @@
             }
         }
 
-        // Add the GeoJSON layers when the map loads
+        // When the map fires "load", add your layers and then wait for the "idle" event
+        // to ensure that all map resources and layers are fully rendered.
         map.on('load', () => {
             addGeoJSONLayers();
+            if (navigator.onLine) {
+                // Instead of hiding immediately on load, wait for "idle"
+                map.once('idle', hideLoadingMessage);
+            }
         });
 
         // Re-add custom layers when the style changes
