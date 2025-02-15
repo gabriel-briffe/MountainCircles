@@ -19,11 +19,11 @@ from utils import process_sectors
 def make_individuals(airfield, config, output_queue=None):
     # print("DEBUG: In make_individuals. Airfield object:", airfield)
     # print("DEBUG: Airfield type:", type(airfield))
-    try:
-        airfield_name = getattr(airfield, 'name', None)
-        # print("DEBUG: Retrieved airfield.name:", airfield_name)
-    except Exception as e:
-        print("DEBUG: Exception when accessing airfield.name:", e)
+    # try:
+    #     airfield_name = getattr(airfield, 'name', None)
+    #     # print("DEBUG: Retrieved airfield.name:", airfield_name)
+    # except Exception as e:
+    #     print("DEBUG: Exception when accessing airfield.name:", e)
 
     # # print("DEBUG: Airfield coordinates: x =", getattr(airfield, 'x', 'N/A'),
     #     #   "y =", getattr(airfield, 'y', 'N/A'))
@@ -99,8 +99,9 @@ def make_individuals(airfield, config, output_queue=None):
 
     # Post-process if all went well
     try:
+        naming = f"{airfield.name}_{config.calculation_name_short}"
         postProcess(str(airfield_folder), Path(config.calculation_folder_path),
-                    config, str(ASCfile), airfield.name, output_queue)
+                    config, str(ASCfile), naming, output_queue)
     except Exception as e:
         log_output(
             f"Error during post-processing for {airfield.name}: {e}", output_queue)
