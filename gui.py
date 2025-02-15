@@ -939,7 +939,7 @@ class MountainCirclesGUI:
 
     def open_results_folder(self):
         """Open the results folder in the system's file explorer"""
-        result_path = self.use_case_name.get().result_folder
+        result_path = self.current_use_case_object.calculation_folder_path
         if not result_path:
             messagebox.showwarning(
                 "Warning", "Please select a result folder first.")
