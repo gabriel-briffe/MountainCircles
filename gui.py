@@ -855,25 +855,19 @@ class MountainCirclesGUI:
 
         # Get the merged layer path from your processing.
         # This should have been set during processing.
-        merged_layer_path = getattr(self, 'merged_layer_path', "nameToReplace")
-        if merged_layer_path == "nameToReplace":
-            print("Warning: self.merged_layer_path is not set. Using default placeholder.")
-        else:
-            print(f"Merged layer path: {merged_layer_path}")
+        merged_layer_path = self.current_use_case_object.merged_output_filepath
+        # if merged_layer_path does not exist, warn user to run processing first
+        if not os.path.exists(merged_layer_path):
+            print("Run processing first.")
+            return
+        
+        geojson_filename = os.path.basename(merged_layer_path)
+        merged_layer_path = geojson_filename
 
-
-        # If merged_layer_path is absolute, copy it into the result folder and use its basename.
-        if os.path.isabs(merged_layer_path):
-            geojson_filename = os.path.basename(merged_layer_path)
-            dest_geojson_path = normJoin(self.calculation_result_folder, geojson_filename)
-            if not os.path.exists(dest_geojson_path):
-                try:
-                    shutil.copy2(merged_layer_path, dest_geojson_path)
-                    print(f"Copied geojson file to: {dest_geojson_path}")
-                except Exception as e:
-                    messagebox.showerror("Error", f"Failed to copy geojson file: {str(e)}")
-                    return
-            merged_layer_path = geojson_filename
+        # --- Process sectors layer (new logic) ---
+        sectors_file_path = self.current_use_case_object.sectors1_filepath
+        sectors_geojson_filename = os.path.basename(sectors_file_path)
+        sectors_file_path = sectors_geojson_filename
 
         # Merge the two HTML updates into one.
         # First, get the map bounds and then update the HTML file from the original map.html template.
@@ -888,6 +882,10 @@ class MountainCirclesGUI:
 
             # Replace the placeholder for the merged layer file.
             content = content.replace("nameToReplace", merged_layer_path)
+            print(f"Merged layer path: {merged_layer_path}")
+            # Replace the placeholder for sectors file.
+            content = content.replace("sectorsPlaceHolder", sectors_file_path)
+            print(f"Sectors file path: {sectors_file_path}")
 
             # Write the updated content once.
             with open(dest_map_path, 'w') as f:
@@ -1129,6 +1127,7 @@ class MountainCirclesGUI:
         use_case_file = normJoin(use_case_dir, selected)
         try:
             loaded_use_case = Use_case(use_case_file=use_case_file)
+            self.current_use_case_object = loaded_use_case
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load use case: {str(e)}")
             return

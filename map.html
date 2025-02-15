@@ -3,22 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MapLibre GL JS Map with GeoJSON</title>
+    <title>MapLibre GL JS Map with Selectable Basemaps</title>
     <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
     <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         body { margin: 0; padding: 0; }
         #map { width: 100%; height: 100vh; }
+        /* Simple style for the basemap switcher */
+        #styleSwitcher {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1;
+            background: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            font-family: sans-serif;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body>
+    <!-- Basemap switcher control -->
+    <div id="styleSwitcher">
+        <label for="basemapSelect">Basemap: </label>
+        <select id="basemapSelect">
+            <option value="thunderforest">Thunderforest Landscape</option>
+            <option value="osm">OpenStreetMap</option>
+            <option value="google">Google Maps</option>
+        </select>
+    </div>
+
+    <!-- New control: Checkbox (for toggling linestrings & labels) and polygon transparency slider -->
+    <div id="polygonOpacityControl" style="position: absolute; top: 50px; right: 10px; z-index: 1; background: #fff; padding: 5px; border-radius: 3px; font-family: sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: flex; align-items: center;">
+        <input id="toggleLayerCheckbox" type="checkbox" checked style="margin-right: 5px;">
+        <input id="polygonOpacitySlider" type="range" min="0" max="0.5" step="0.01" value="0.2">
+    </div>
+
     <div id="map"></div>
     <script>
-        // Map style for Thunderforest Landscape
-        const style = {
+        // Define the style objects for each basemap
+        const thunderforestStyle = {
             "version": 8,
             "name": "Thunderforest Landscape",
-            "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf", // Added this line
+            "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
             "sources": {
                 "raster-tiles": {
                     "type": "raster",
@@ -40,102 +68,313 @@
             ]
         };
 
+        const osmStyle = {
+            "version": 8,
+            "name": "OpenStreetMap",
+            "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+            "sources": {
+                "osm-tiles": {
+                    "type": "raster",
+                    "tiles": [
+                        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    ],
+                    "tileSize": 256,
+                    "attribution": "© OpenStreetMap contributors"
+                }
+            },
+            "layers": [
+                {
+                    "id": "osm-tiles",
+                    "type": "raster",
+                    "source": "osm-tiles",
+                    "minzoom": 0,
+                    "maxzoom": 19
+                }
+            ]
+        };
+
+        // Note: Using Google Maps as a basemap requires proper licensing and API configuration.
+        // This is just a placeholder URL.
+        const googleStyle = {
+            "version": 8,
+            "name": "Google Maps",
+            "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+            "sources": {
+                "google-tiles": {
+                    "type": "raster",
+                    "tiles": [
+                        "http://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}"
+                    ],
+                    "tileSize": 256,
+                    "attribution": "© Google"
+                }
+            },
+            "layers": [
+                {
+                    "id": "google-tiles",
+                    "type": "raster",
+                    "source": "google-tiles",
+                    "minzoom": 0,
+                    "maxzoom": 22
+                }
+            ]
+        };
+
+        // Object mapping for style selection
+        const styles = {
+            thunderforest: thunderforestStyle,
+            osm: osmStyle,
+            google: googleStyle
+        };
+
+        // Start with the Thunderforest style
+        let currentStyle = thunderforestStyle;
+
         // Initialize the map
         const map = new maplibregl.Map({
             container: 'map',
-            style: style,
+            style: currentStyle,
             bounds: [[minx, miny], [maxx, maxy]],  // replaced by python
             fitBoundsOptions: {
-                padding: 50,  // Add padding around the bounds
-                maxZoom: 14,  // Limit maximum zoom level
-                duration: 1000  // Smooth animation (1 second)
-            } // Initial zoom level (adjust as needed)
+                padding: 50,
+                maxZoom: 14,
+                duration: 1000
+            }
         });
 
-        // Load the GeoJSON and add layers
+        // Function to add GeoJSON source and custom layers
+        function addGeoJSONLayers() {
+            if (!map.getSource('geojson-data')) {
+                map.addSource('geojson-data', {
+                    type: 'geojson',
+                    data: 'nameToReplace'  // Replace with your actual GeoJSON file path for lines/points
+                });
+            }
+            
+            // Add linestrings layer if it doesn't exist
+            if (!map.getLayer('linestrings-layer')) {
+                map.addLayer({
+                    id: 'linestrings-layer',
+                    type: 'line',
+                    source: 'geojson-data',
+                    filter: ['==', '$type', 'LineString'],
+                    paint: {
+                        'line-color': '#000',
+                        'line-width': ['step', ['zoom'], 1, 10, 2]  // width 1 for zoom < 8, and 2 for zoom >= 8
+                    }
+                });
+            }
+            
+            // Add linestrings labels (only above zoom 8)
+            if (!map.getLayer('linestrings-labels')) {
+                map.addLayer({
+                    id: 'linestrings-labels',
+                    type: 'symbol',
+                    source: 'geojson-data',
+                    minzoom: 8,
+                    filter: ['==', '$type', 'LineString'],
+                    layout: {
+                        'text-field': '{ELEV}',
+                        'symbol-placement': 'line',
+                        'text-rotation-alignment': 'auto',
+                        'text-keep-upright': true,
+                        'text-size': 14,
+                        'text-allow-overlap': false,
+                        'text-ignore-placement': false,
+                        'text-offset': [0, 0],
+                        'symbol-spacing': 250
+                    },
+                    paint: {
+                        'text-color': '#000',
+                        'text-halo-color': '#fff',
+                        'text-halo-width': 2
+                    }
+                });
+            }
+
+            // Add points layer
+            if (!map.getLayer('points-layer')) {
+                map.addLayer({
+                    id: 'points-layer',
+                    type: 'circle',
+                    source: 'geojson-data',
+                    filter: ['==', '$type', 'Point'],
+                    paint: {
+                        'circle-radius': 10,
+                        'circle-color': '#ff0000',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#fff'
+                    }
+                });
+            }
+
+            // Add points labels (only above zoom 8)
+            if (!map.getLayer('points-labels')) {
+                map.addLayer({
+                    id: 'points-labels',
+                    type: 'symbol',
+                    source: 'geojson-data',
+                    minzoom: 8,
+                    filter: ['==', '$type', 'Point'],
+                    layout: {
+                        'text-field': '{name}',
+                        'text-size': 15,
+                        'text-allow-overlap': false,
+                        'text-ignore-placement': false,
+                        'text-offset': [0.8, 0.8]
+                    },
+                    paint: {
+                        'text-color': '#000',
+                        'text-halo-color': '#fff',
+                        'text-halo-width': 2
+                    }
+                });
+            }
+
+            // --- New code: Adding the polygons layer ---
+            // Check if the polygons source has been added already
+            if (!map.getSource('polygons')) {
+                map.addSource('polygons', {
+                    type: 'geojson',
+                    data: 'sectorsPlaceHolder'  // Make sure this file is accessible
+                });
+            }
+            
+            // Add the polygon fill layer with dynamic opacity and styled fill-color based on "color_id"
+            if (!map.getLayer('polygons-layer')) {
+                map.addLayer({
+                    id: 'polygons-layer',
+                    type: 'fill',
+                    source: 'polygons',
+                    paint: {
+                        'fill-color': [
+                            "match",
+                            ["get", "color_id"],
+                            0, "#0000FF",  // When color_id === 0
+                            1, "#FF00FF",  // When color_id === 1
+                            2, "#FFFF00",  // When color_id === 2
+                            3, "#00FFFF",  // When color_id === 3
+                            4, "#00FF00",  // When color_id === 4
+                            5, "#FF0000",  // When color_id === 5
+                            6, "#FFA500",  // When color_id === 6
+                            "#000000"      // Fallback default color
+                        ],
+                        'fill-opacity': 0.2  // Default opacity matching the initial slider value
+                    }
+                });
+            }
+        }
+
+        // Add the GeoJSON layers when the map loads
         map.on('load', () => {
-            // Add GeoJSON source
-            map.addSource('geojson-data', {
-                type: 'geojson',
-                data: 'nameToReplace'  // Replace with actual GeoJSON file address later
-            });
+            addGeoJSONLayers();
+        });
 
-            // Add linestrings layer (for LineString geometries)
-            map.addLayer({
-                id: 'linestrings-layer',
-                type: 'line',
-                source: 'geojson-data',
-                filter: ['==', '$type', 'LineString'],  // Filter for linestrings
-                paint: {
-                    'line-color': '#000',
-                    'line-width': ['step', ['zoom'], 1, 8, 2]
-                }
-            });
+        // Re-add custom layers when the style changes
+        map.on('styledata', () => {
+            addGeoJSONLayers();
+        });
 
-            // Add labels for linestrings (automatic positioning and orientation)
-            map.addLayer({
-                id: 'linestrings-labels',
-                type: 'symbol',
-                source: 'geojson-data',
-                minzoom: 8,  // Only show line labels when zoom is 8 or above
-                filter: ['==', '$type', 'LineString'],
-                layout: {
-                    'text-field': '{ELEV}',  // Replace with your property containing label text
-                    'symbol-placement': 'line',
-                    'text-rotation-alignment': 'auto',
-                    'text-keep-upright': true,
-                    'text-size': 14,
-                    'text-allow-overlap': false,
-                    'text-ignore-placement': false,
-                    'text-offset': [0, 0],
-                    'symbol-spacing': 250
-                },
-                paint: {
-                    'text-color': '#000',
-                    'text-halo-color': '#fff',
-                    'text-halo-width': 2
-                }
-            });
-
-            // Add points layer (for Point geometries)
-            map.addLayer({
-                id: 'points-layer',
-                type: 'circle',
-                source: 'geojson-data',
-                filter: ['==', '$type', 'Point'],  // Filter for points
-                paint: {
-                    'circle-radius': 5,
-                    'circle-color': '#ff0000',  // red
-                    'circle-stroke-width': 2,
-                    'circle-stroke-color': '#fff'
-                }
-            });
-
-            // Add labels for points
-            map.addLayer({
-                id: 'points-labels',
-                type: 'symbol',
-                source: 'geojson-data',
-                minzoom: 8,  // Only show point labels when zoom is 8 or above
-                filter: ['==', '$type', 'Point'],  // Filter for points
-                layout: {
-                    'text-field': '{name}',  // Replace 'name' with the property containing label text
-                    'text-size': 15,
-                    'text-allow-overlap': false,
-                    'text-ignore-placement': false,
-                    'text-offset': [0.8, 0.8]  // Offset labels above the point
-                },
-                paint: {
-                    'text-color': '#000',
-                    'text-halo-color': '#fff',  // White halo for readability
-                    'text-halo-width': 2
-                }
-            });
+        // Basemap switcher logic using the dropdown
+        const basemapSelect = document.getElementById('basemapSelect');
+        basemapSelect.addEventListener('change', (e) => {
+            const selectedStyle = styles[e.target.value];
+            map.setStyle(selectedStyle);
         });
 
         // Error handling
         map.on('error', (e) => {
             console.error('Map error:', e);
+        });
+
+        // Polygon transparency slider event listener
+        const polygonOpacitySlider = document.getElementById('polygonOpacitySlider');
+
+        polygonOpacitySlider.addEventListener('input', function() {
+            const opacity = parseFloat(this.value);
+            if (map.getLayer('polygons-layer')) {
+                map.setPaintProperty('polygons-layer', 'fill-opacity', opacity);
+            }
+        });
+
+        // Checkbox event listener to toggle linestrings, their labels, and the polygon layer visibility
+        const toggleLayerCheckbox = document.getElementById('toggleLayerCheckbox');
+
+        toggleLayerCheckbox.addEventListener('change', function() {
+            const visibility = this.checked ? 'visible' : 'none';
+            if (map.getLayer('linestrings-layer')) {
+                map.setLayoutProperty('linestrings-layer', 'visibility', visibility);
+            }
+            if (map.getLayer('linestrings-labels')) {
+                map.setLayoutProperty('linestrings-labels', 'visibility', visibility);
+            }
+            if (map.getLayer('polygons-layer')) {
+                map.setLayoutProperty('polygons-layer', 'visibility', visibility);
+            }
+        });
+
+        // Event listener for toggling a dynamic linestring layer and its labels when a point is clicked
+        map.on('click', 'points-layer', function(e) {
+            if (!e.features || !e.features.length) return;
+            
+            const feature = e.features[0];
+            const pointName = feature.properties.name;
+            if (!pointName) return; // Ensure the point has a name property
+            
+            // Define dynamic layer, source, and label IDs based on the point's name
+            const dynamicLayerId = 'dynamic-lines-' + pointName;
+            const dynamicSourceId = dynamicLayerId + '-source';
+            const dynamicLabelId = dynamicLayerId + '-labels';
+            
+            // If the dynamic layers already exist, remove them
+            if (map.getLayer(dynamicLayerId)) {
+                map.removeLayer(dynamicLayerId);
+                map.removeLayer(dynamicLabelId);
+                map.removeSource(dynamicSourceId);
+            } else {
+                // Add a new GeoJSON source for the dynamic linestring layer
+                map.addSource(dynamicSourceId, {
+                    type: 'geojson',
+                    data: pointName + '.geojson'
+                });
+                
+                // Add the dynamic linestring layer with the same style as your other linestrings
+                map.addLayer({
+                    id: dynamicLayerId,
+                    type: 'line',
+                    source: dynamicSourceId,
+                    filter: ['==', '$type', 'LineString'],
+                    paint: {
+                        'line-color': '#000',
+                        'line-width': ['step', ['zoom'], 1, 10, 2]
+                    }
+                });
+                
+                // Add the dynamic label layer for the linestrings with styling similar to the other labels
+                map.addLayer({
+                    id: dynamicLabelId,
+                    type: 'symbol',
+                    source: dynamicSourceId,
+                    minzoom: 8,
+                    filter: ['==', '$type', 'LineString'],
+                    layout: {
+                        'text-field': '{ELEV}',
+                        'symbol-placement': 'line',
+                        'text-rotation-alignment': 'auto',
+                        'text-keep-upright': true,
+                        'text-size': 14,
+                        'text-allow-overlap': false,
+                        'text-ignore-placement': false,
+                        'text-offset': [0, 0],
+                        'symbol-spacing': 250
+                    },
+                    paint: {
+                        'text-color': '#000',
+                        'text-halo-color': '#fff',
+                        'text-halo-width': 2
+                    }
+                });
+            }
         });
     </script>
 </body>
