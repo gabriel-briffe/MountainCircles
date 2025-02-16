@@ -86,7 +86,7 @@ If the calculation script doesn't work, try to recompile the C++ code as is desc
 ### Compiling C++ on windows
 - install the MinGW toolchain. follow this tutorial, skip the vscode installation, no need: https://code.visualstudio.com/docs/cpp/config-mingw
 - When ```g++ --version``` is responding with a version number, navigate to the main folder of the mountaincircles folder that you downloaded and extracted.
-- Run ```g++ -std=c++11 -o compute.exe cpp\main.cpp cpp\data\Cell.cpp cpp\data\Matrix.cpp cpp\io\Params.cpp```
+- Run ```g++ -std=c++11 -o compute.exe cpp\main.cpp cpp\data\Cell.cpp cpp\data\Matrix.cpp cpp\io\Params.cpp -static-libgcc -static-libstdc++```
 - Open a new command prompt, check gcc version again
 - Run the gui.py ```python gui.py```
 
