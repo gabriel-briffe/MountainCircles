@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MapLibre GL JS Map with Selectable Basemaps</title>
-    <script src="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.js"></script>
-    <link href="https://unpkg.com/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- Using jsDelivr instead of unpkg to avoid potential network errors on Windows -->
+    <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@latest/dist/maplibre-gl.css" rel="stylesheet" />
     <style>
         body { margin: 0; padding: 0; }
         #map { width: 100%; height: 100vh; }
@@ -322,79 +323,29 @@
             }
         }
 
-        // When the map fires "load", add your layers and then wait for the "idle" event
-        // to ensure that all map resources and layers are fully rendered.
-        map.on('load', () => {
-            addGeoJSONLayers();
-            if (navigator.onLine) {
-                // Instead of hiding immediately on load, wait for "idle"
-                map.once('idle', hideLoadingMessage);
-            }
-        });
-
-        // Re-add custom layers when the style changes
-        map.on('styledata', () => {
-            addGeoJSONLayers();
-        });
-
-        // Basemap switcher logic using the dropdown
-        const basemapSelect = document.getElementById('basemapSelect');
-        basemapSelect.addEventListener('change', (e) => {
-            const selectedStyle = styles[e.target.value];
-            map.setStyle(selectedStyle);
-        });
-
-        // Error handling
-        map.on('error', (e) => {
-            console.error('Map error:', e);
-        });
-
-        // Polygon transparency slider event listener
-        const polygonOpacitySlider = document.getElementById('polygonOpacitySlider');
-
-        polygonOpacitySlider.addEventListener('input', function() {
-            const opacity = parseFloat(this.value);
-            if (map.getLayer('polygons-layer')) {
-                map.setPaintProperty('polygons-layer', 'fill-opacity', opacity);
-            }
-        });
-
-        // Checkbox event listener to toggle linestrings, their labels, and the polygon layer visibility
-        const toggleLayerCheckbox = document.getElementById('toggleLayerCheckbox');
-
-        toggleLayerCheckbox.addEventListener('change', function() {
-            const visibility = this.checked ? 'visible' : 'none';
-            if (map.getLayer('linestrings-layer')) {
-                map.setLayoutProperty('linestrings-layer', 'visibility', visibility);
-            }
-            if (map.getLayer('linestrings-labels')) {
-                map.setLayoutProperty('linestrings-labels', 'visibility', visibility);
-            }
-            if (map.getLayer('polygons-layer')) {
-                map.setLayoutProperty('polygons-layer', 'visibility', visibility);
-            }
-        });
-
-        // Event listener for toggling a dynamic linestring layer and its labels when a point is clicked
-        map.on('click', 'points-layer', function(e) {
+        // Define a dedicated function to handle point clicks for toggling dynamic layers.
+        function handlePointClick(e) {
+            console.log("Point clicked event:", e);  // Debug logging to verify click events
             if (!e.features || !e.features.length) return;
-            
+
             const feature = e.features[0];
+            if (!feature.properties || !feature.properties.filename) {
+                console.warn("Clicked feature missing 'filename' property:", feature);
+                return;
+            }
             const pointFileName = feature.properties.filename;
-            if (!pointFileName) return; // Ensure the point has a name property
-            
-            // Define dynamic layer, source, and label IDs based on the point's name
             const dynamicLayerId = 'dynamic-lines-' + pointFileName;
             const dynamicSourceId = dynamicLayerId + '-source';
             const dynamicLabelId = dynamicLayerId + '-labels';
-            
-            // If the dynamic layers already exist, remove them
+
+            // Toggle: remove dynamic layer if exists, or add it if not present.
             if (map.getLayer(dynamicLayerId)) {
-                map.removeLayer(dynamicLayerId);
-                map.removeLayer(dynamicLabelId);
-                map.removeSource(dynamicSourceId);
+                console.log("Removing dynamic layer:", dynamicLayerId);
+                if (map.getLayer(dynamicLayerId)) map.removeLayer(dynamicLayerId);
+                if (map.getLayer(dynamicLabelId)) map.removeLayer(dynamicLabelId);
+                if (map.getSource(dynamicSourceId)) map.removeSource(dynamicSourceId);
             } else {
-                // Add a new GeoJSON source for the dynamic linestring layer
+                console.log("Adding dynamic layer for:", pointFileName);
                 map.addSource(dynamicSourceId, {
                     type: 'geojson',
                     data: pointFileName
@@ -436,6 +387,68 @@
                         'text-halo-width': 2
                     }
                 });
+            }
+        }
+
+        // Attach layers and events only once the map has fully loaded.
+        map.on('load', () => {
+            addGeoJSONLayers();
+            // Only attach the click handler if the points-layer is present.
+            if (map.getLayer('points-layer')) {
+                map.on('click', 'points-layer', handlePointClick);
+            } else {
+                console.warn("points-layer not found on map load.");
+            }
+            if (navigator.onLine) {
+                map.once('idle', hideLoadingMessage);
+            }
+        });
+
+        // Re-add custom layers and reattach event listeners when the style changes.
+        map.on('styledata', () => {
+            addGeoJSONLayers();
+            // Remove then reattach the click handler for the points-layer.
+            map.off('click', 'points-layer', handlePointClick);
+            if (map.getLayer('points-layer')) {
+                map.on('click', 'points-layer', handlePointClick);
+            } else {
+                console.warn("points-layer not found during styledata event.");
+            }
+        });
+
+        // Basemap switcher logic using the dropdown.
+        const basemapSelect = document.getElementById('basemapSelect');
+        basemapSelect.addEventListener('change', (e) => {
+            const selectedStyle = styles[e.target.value];
+            map.setStyle(selectedStyle);
+        });
+
+        // Error handling.
+        map.on('error', (e) => {
+            console.error('Map error:', e);
+        });
+
+        // Polygon transparency slider event listener.
+        const polygonOpacitySlider = document.getElementById('polygonOpacitySlider');
+        polygonOpacitySlider.addEventListener('input', function() {
+            const opacity = parseFloat(this.value);
+            if (map.getLayer('polygons-layer')) {
+                map.setPaintProperty('polygons-layer', 'fill-opacity', opacity);
+            }
+        });
+
+        // Checkbox event listener to toggle linestrings, their labels, and the polygon layer visibility.
+        const toggleLayerCheckbox = document.getElementById('toggleLayerCheckbox');
+        toggleLayerCheckbox.addEventListener('change', function() {
+            const visibility = this.checked ? 'visible' : 'none';
+            if (map.getLayer('linestrings-layer')) {
+                map.setLayoutProperty('linestrings-layer', 'visibility', visibility);
+            }
+            if (map.getLayer('linestrings-labels')) {
+                map.setLayoutProperty('linestrings-labels', 'visibility', visibility);
+            }
+            if (map.getLayer('polygons-layer')) {
+                map.setLayoutProperty('polygons-layer', 'visibility', visibility);
             }
         });
 
@@ -522,8 +535,7 @@
         }
 
         // Function to handle file selection, convert the IGC to GeoJSON,
-        // add it as a new line layer, add a label layer for altitude at each point (visible for zoom > 11),
-        // and recenter the map to fit the IGC track bounds.
+        // add it as a new line layer with altitude labels, and recenter the map.
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
