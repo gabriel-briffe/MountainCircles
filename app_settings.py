@@ -51,13 +51,13 @@ class AppSettings:
             print(f"Architecture: {architecture}")
             # Retrieve system name and architecture using the platform module
             # For macOS ARM64
-            if os_name == "Darwin" and architecture in ["arm64", "aarch64"]:
+            if os_name == "Darwin" and architecture in ["arm64", "ARM64", "aarch64"]:
                 self.calc_script = "compute_mac_arm64"
             # For macOS x86_64
             if os_name == "Darwin" and architecture in ["AMD64", "x86_64"]:
                 self.calc_script = "compute_mac_x86_64"
             # For Windows ARM64
-            if os_name == "Windows" and architecture in ["arm64", "aarch64"]:
+            if os_name == "Windows" and architecture in ["arm64", "ARM64", "aarch64"]:
                 self.calc_script = "compute_windows_arm64.exe"
             # For Windows x86_64
             if os_name == "Windows" and architecture in ["AMD64", "x86_64"]:

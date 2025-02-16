@@ -70,7 +70,7 @@ The following pictures are with glide parameters L/D 25, ground clearance 100m (
 - unzip, open terminal or command prompt, navigate to the mountaincircles folder that you downloaded and extracted.
 - Create python virtual environnement : ```python -m venv myenv```
 - Activate myenv : mac : ```source myenv/bin/activate```  
-- windows from command prompt : ```myenv\Script\activate.bat```
+- windows from command prompt : ```myenv\Scripts\activate.bat```
 - install dependencies : ``` pip install -r requirements.txt```
 - run : ``` python gui.py```
 
