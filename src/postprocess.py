@@ -165,7 +165,7 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
         for feature in merged_features:
             if feature.get("geometry", {}).get("type") == "Point":
                 name = feature.get("properties", {}).get("name", "unknown")
-                feature["properties"]["filepath"] = normJoin(config.calculation_folder_path,f"{name}.geojson")
+                feature["properties"]["filename"] = f"{name}_{config.calculation_name_short}.geojson"
 
         # Create the merged GeoJSON
         merged_geojson = {

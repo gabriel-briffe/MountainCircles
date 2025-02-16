@@ -380,11 +380,11 @@
             if (!e.features || !e.features.length) return;
             
             const feature = e.features[0];
-            const pointName = feature.properties.name;
-            if (!pointName) return; // Ensure the point has a name property
+            const pointFileName = feature.properties.filename;
+            if (!pointFileName) return; // Ensure the point has a name property
             
             // Define dynamic layer, source, and label IDs based on the point's name
-            const dynamicLayerId = 'dynamic-lines-' + pointName;
+            const dynamicLayerId = 'dynamic-lines-' + pointFileName;
             const dynamicSourceId = dynamicLayerId + '-source';
             const dynamicLabelId = dynamicLayerId + '-labels';
             
@@ -397,7 +397,7 @@
                 // Add a new GeoJSON source for the dynamic linestring layer
                 map.addSource(dynamicSourceId, {
                     type: 'geojson',
-                    data: pointName + '.geojson'
+                    data: pointFileName
                 });
                 
                 // Add the dynamic linestring layer with the same style as your other linestrings

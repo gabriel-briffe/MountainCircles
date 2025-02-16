@@ -189,8 +189,8 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file, hillshad
                     
                     # Load the OSM tile in RGB mode and enhance it:
                     osm_img = Image.open(io.BytesIO(osm_data)).convert('RGB')
-                    osm_img = ImageEnhance.Contrast(osm_img).enhance(1.5)
-                    osm_img = ImageEnhance.Color(osm_img).enhance(0.8)
+                    osm_img = ImageEnhance.Contrast(osm_img).enhance(1)
+                    osm_img = ImageEnhance.Color(osm_img).enhance(1)
                     
                     # Multiply blend: each pixel is (osm_pixel * hillshade_pixel) / 255
                     final_img = ImageChops.multiply(osm_img, hillshade_img)
