@@ -621,45 +621,6 @@ class MountainCirclesGUI:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to save use case: {str(e)}")
 
-    # def create_use_case_dict(self):
-    #     """Create a dictionary with current parameters to save as a use case."""
-    #     from collections import OrderedDict
-
-    #     use_case = OrderedDict([
-    #         ("use_case_name", self.use_case.get()),
-    #         ("region", self.region.get()),
-    #         ("input_files", OrderedDict([
-    #             ("airfield_file", self.get_abs_path(self.airfield_path.get())),
-    #             ("topography_file", self.get_abs_path(self.topo_path.get())),
-    #             ("CRS_file", self.get_abs_path(self.topo_CRSfile_path.get())),
-    #             ("result_folder", self.get_abs_path(self.result_path.get())),
-    #             ("compute", self.get_abs_path(self.calc_script.get())),
-    #             ("mapcssTemplate", self.get_abs_path(normJoin(self.GMstyles_folder_path, "circlesAndAirfields.mapcss")))
-    #         ])),
-    #         ("CRS", OrderedDict([
-    #             ("name", "custom"),
-    #             ("definition", self.input_crs)
-    #         ])),
-    #         ("glide_parameters", OrderedDict([
-    #             ("glide_ratio", float(self.glide_ratio.get())),
-    #             ("ground_clearance", float(self.ground_clearance.get())),
-    #             ("circuit_height", float(self.circuit_height.get()))
-    #         ])),
-    #         ("calculation_parameters", OrderedDict([
-    #             ("max_altitude", float(self.max_altitude.get()))
-    #         ])),
-    #         ("rendering", OrderedDict([
-    #             ("contour_height", int(self.contour_height.get()))
-    #         ])),
-    #         ("gurumaps_styles", self.gurumaps_styles.get()),
-    #         ("exportPasses", self.export_passes.get()),
-    #         ("delete_previous_calculation", self.delete_previous_calculation.get()),
-    #         ("clean_temporary_raster_files", self.clean_temporary_raster_files.get()),
-    #         ("merged_output_name", self.merged_output_name)
-    #     ])
-
-    #     return use_case
-
     def validate_inputs(self):
         """Validate all input fields"""
         if not self.airfield_path.get():

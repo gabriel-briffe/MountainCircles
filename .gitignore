@@ -19,3 +19,4 @@
 *.geojson
 /cache
 **/*.mbtiles
+**/*.prj

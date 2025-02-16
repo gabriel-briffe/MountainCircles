@@ -4,7 +4,6 @@ import multiprocessing
 import shutil
 import subprocess
 from src.shortcuts import normJoin
-# from src.config import Config
 from src.airfields import Airfields4326
 from src.postprocess import postProcess
 from src.raster import merge_output_rasters
@@ -17,16 +16,6 @@ from utils import process_sectors
 
 
 def make_individuals(airfield, config, output_queue=None):
-    # print("DEBUG: In make_individuals. Airfield object:", airfield)
-    # print("DEBUG: Airfield type:", type(airfield))
-    # try:
-    #     airfield_name = getattr(airfield, 'name', None)
-    #     # print("DEBUG: Retrieved airfield.name:", airfield_name)
-    # except Exception as e:
-    #     print("DEBUG: Exception when accessing airfield.name:", e)
-
-    # # print("DEBUG: Airfield coordinates: x =", getattr(airfield, 'x', 'N/A'),
-    #     #   "y =", getattr(airfield, 'y', 'N/A'))
 
     if not config.isInside(airfield.x, airfield.y):
         log_output(

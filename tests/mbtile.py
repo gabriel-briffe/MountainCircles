@@ -2,7 +2,7 @@ import requests
 import sqlite3
 import math
 import os
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageChops
 import io
 import numpy as np
 from scipy.ndimage import gaussian_filter
@@ -65,12 +65,12 @@ def generate_hillshade(elevation, azimuth=315, altitude=45):
     altitude_rad = altitude * np.pi / 180
     
     shaded = np.sin(altitude_rad) * np.sin(slope) + \
-            np.cos(altitude_rad) * np.cos(slope) * \
-            np.cos((azimuth_rad - np.pi/2.) - aspect)
+             np.cos(altitude_rad) * np.cos(slope) * \
+             np.cos((azimuth_rad - np.pi/2.) - aspect)
     
     # Normalize and scale to 0-255
     shaded = (shaded - shaded.min()) / (shaded.max() - shaded.min())
-    shaded = gaussian_filter(shaded, sigma=1)  # Smooth the hillshade
+    # shaded = gaussian_filter(shaded, sigma=5)  # Smooth the hillshade
     return (shaded * 255).astype(np.uint8)
 
 def create_mbtiles_file(filename):
@@ -103,7 +103,7 @@ def create_mbtiles_file(filename):
         ("type", "baselayer"),
         ("version", "1"),
         ("description", "OSM with hillshading"),
-        ("format", "png")
+        ("format", "jpeg")
     ]
     cursor.executemany("INSERT INTO metadata VALUES (?, ?)", metadata)
     
@@ -134,17 +134,26 @@ def calculate_bbox_from_geojson(geojson_path):
     
     return [min_lat, min_lon, max_lat, max_lon]
 
-def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file):
+def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file, hillshade_mbtiles):
+    """
+    Downloads OSM tiles and overlays them with hillshade tiles sourced from a local MBTiles file.
+    Instead of using a remote terrain endpoint, this function reads hillshade tiles from the
+    specified local MBTiles (hillshade_mbtiles).
+    """
     osm_server = "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
-    terrain_server = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
     
+    # Create output MBTiles file for the combined hillshaded map
     conn = create_mbtiles_file(mbtiles_file)
     cursor = conn.cursor()
+    
+    # Open connection to local hillshade MBTiles
+    hillshade_conn = sqlite3.connect(hillshade_mbtiles)
+    hillshade_cursor = hillshade_conn.cursor()
     
     min_lat, min_lon, max_lat, max_lon = bbox
     
     for zoom in range(min_zoom, max_zoom + 1):
-        # Correctly compute the tile range:
+        # Compute the tile range:
         min_x, min_y = deg2num(max_lat, min_lon, zoom)   # top-left corner
         max_x, max_y = deg2num(min_lat, max_lon, zoom)     # bottom-right corner
         
@@ -158,34 +167,40 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file):
                 current_tile += 1
                 print(f"Processing tile {current_tile}/{total_tiles} (z{zoom}/x{x}/y{y})")
                 
-                # Using caching for both OSM and terrain tiles
+                # Using caching for OSM tiles
                 osm_data = get_tile(zoom, x, y, osm_server, "osm")
-                terrain_data = get_tile(zoom, x, y, terrain_server, "terrain")
+                # Instead of downloading a terrain tile, fetch the hillshade tile from the local MBTiles.
+                flipped_y = (2**zoom - 1) - y
+                hillshade_cursor.execute(
+                    "SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?",
+                    (zoom, x, flipped_y)
+                )
+                result = hillshade_cursor.fetchone()
+                if result:
+                    hillshade_data = result[0]
+                else:
+                    print(f"Hillshade tile not found for z{zoom}/x{x}/y{y}")
+                    hillshade_data = None
                 
-                if osm_data and terrain_data:
-                    # Decode terrain data
-                    elevation = decode_terrain_tile(terrain_data)
+                if osm_data and hillshade_data:
+                    # Instead of working in RGBA, we work in RGB since multiply doesn't use alpha
+                    # Load hillshade image as RGB:
+                    hillshade_img = Image.open(io.BytesIO(hillshade_data)).convert('RGB')
                     
-                    # Generate hillshade
-                    hillshade_array = generate_hillshade(elevation)
-                    hillshade_img = Image.fromarray(hillshade_array).convert('RGBA')
+                    # Load the OSM tile in RGB mode and enhance it:
+                    osm_img = Image.open(io.BytesIO(osm_data)).convert('RGB')
+                    osm_img = ImageEnhance.Contrast(osm_img).enhance(1.5)
+                    osm_img = ImageEnhance.Color(osm_img).enhance(0.8)
                     
-                    # Convert hillshade to semi-transparent overlay
-                    hillshade_img.putalpha(128)  # 50% opacity
+                    # Multiply blend: each pixel is (osm_pixel * hillshade_pixel) / 255
+                    final_img = ImageChops.multiply(osm_img, hillshade_img)
                     
-                    # Load OSM tile
-                    osm_img = Image.open(io.BytesIO(osm_data)).convert('RGBA')
-                    
-                    # Composite images
-                    final_img = Image.alpha_composite(osm_img, hillshade_img)
-                    
-                    # Save to bytes
+                    # Save to bytes using JPEG compression with specified quality:
                     output = io.BytesIO()
-                    final_img.convert('RGB').save(output, format='PNG')
+                    final_img.save(output, format='JPEG', quality=85)
                     tile_data = output.getvalue()
                     
-                    # MBTiles uses a flipped y coordinate
-                    flipped_y = (2**zoom - 1) - y
+                    # MBTiles uses a flipped y coordinate for storage
                     cursor.execute(
                         "INSERT OR REPLACE INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)",
                         (zoom, x, flipped_y, tile_data)
@@ -194,12 +209,13 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file):
         conn.commit()
     
     conn.close()
+    hillshade_conn.close()
     print("Download and processing complete!")
 
 # Example usage
 if __name__ == "__main__":
     # Hardcoded GeoJSON file path
-    geojson_path = "/Users/gabrielbriffe/Downloads/MCtest/Alps/RESULTS/small/25-100-250-4200/aa_small_25-100-250.geojson"
+    geojson_path = "./tests/aa_alps_25-100-250 copy.geojson"
     
     # Calculate bbox from GeoJSON
     bbox = calculate_bbox_from_geojson(geojson_path)
@@ -208,6 +224,10 @@ if __name__ == "__main__":
     min_zoom = 1
     max_zoom = 12
     
-    output_file = "./tests/hillshaded_challes.mbtiles"
+    # Output MBTiles file for the hillshaded map
+    output_file = "./tests/hillshaded_alps.mbtiles"
+
+    # Local hillshade MBTiles file which contains precomputed hillshade tiles
+    hillshade_mbtiles_path = "./tests/hillshade.mbtiles"
     
-    download_and_combine_region(bbox, min_zoom, max_zoom, output_file)
+    download_and_combine_region(bbox, min_zoom, max_zoom, output_file, hillshade_mbtiles_path)
