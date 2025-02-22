@@ -93,6 +93,14 @@ class MountainCirclesGUI:
         self.cup_input_path = tk.StringVar(value="")
         self.cup_output_path = tk.StringVar(value="")
         self.process_passes_CRSfile = tk.StringVar(value="")
+        # --- New instance variables for generate_map.py parameters ---
+        self.map_input_topo = tk.StringVar(value="")
+        self.map_output_mbtiles = tk.StringVar(value="")
+        self.map_bounds = tk.StringVar(value="")       # if empty, default will be used
+        self.map_z_factor_slopes = tk.StringVar(value="1.4")      # default value is "1"
+        self.map_z_factor_shades = tk.StringVar(value="2")      # default value is "1"
+        self.map_azimuth = tk.StringVar(value="315")       # default value is "0"
+        self.map_altitude = tk.StringVar(value="45")      # default value is "0"
         # self.merged_output_name = "aa"
         self.help_process_passes_filepath = ""
         self.help_run_filepath = ""
@@ -338,8 +346,7 @@ class MountainCirclesGUI:
         main_frame.grid_rowconfigure(16, weight=1)
 
     def setup_utilities_tab(self):
-        """Setup the Utilities tab without scroll functionality"""
-        # Create a main frame for the utilities tab
+        """Setup the Utilities tab with sections for various utilities."""
         main_frame = ttk.Frame(self.utilities_tab, padding="5")
         main_frame.pack(expand=True, fill="both")
         main_frame.pack_propagate(False)
@@ -413,6 +420,51 @@ class MountainCirclesGUI:
         ttk.Button(action_frame, text="Process Passes", command=self.process_passes).pack(side=tk.LEFT, padx=5)
 
         process_passes_frame.grid_columnconfigure(1, weight=1)
+
+        # -----------------------------------------------------------
+        # Generate Map Section (MBTiles generation using generate_map.py)
+        map_frame = ttk.LabelFrame(main_frame, text="Generate Map (MBTiles)", padding="5")
+        map_frame.grid(row=2, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=20)
+        
+        # Input Topo file
+        ttk.Label(map_frame, text="Input Topo file:").grid(row=0, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_input_topo).grid(row=0, column=1, sticky="ew", padx=5)
+        ttk.Button(map_frame, text="Browse", command=lambda: self.browse_file("Topo File", self.map_input_topo)).grid(row=0, column=2)
+
+        # Output MBTiles file
+        ttk.Label(map_frame, text="Output MBTiles file:").grid(
+            row=1, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_output_mbtiles).grid(
+            row=1, column=1, sticky="ew", padx=5)
+        ttk.Button(map_frame, text="Browse", 
+                   command=lambda: self.browse_save_file("MBTiles File", self.map_output_mbtiles, [("MBTiles files", "*.mbtiles")])
+                  ).grid(row=1, column=2)
+
+        # GeoJSON Bounds file field (modified label)
+        ttk.Label(map_frame, text="Use this GeoJSON for bounds (optional):").grid(row=2, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_bounds).grid(row=2, column=1, sticky="ew", padx=5)
+        ttk.Button(map_frame, text="Browse", command=lambda: self.browse_file("GeoJSON File", self.map_bounds)).grid(row=2, column=2)
+
+        # Z-factor for slopes
+        ttk.Label(map_frame, text="Z-factor for slopes:").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_z_factor_slopes).grid(row=3, column=1, sticky="ew", padx=5)
+        
+        # Z-factor for shades
+        ttk.Label(map_frame, text="Z-factor for shades:").grid(row=4, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_z_factor_shades).grid(row=4, column=1, sticky="ew", padx=5)
+        
+        # Azimuth
+        ttk.Label(map_frame, text="Azimuth:").grid(row=5, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_azimuth).grid(row=5, column=1, sticky="ew", padx=5)
+        
+        # Altitude
+        ttk.Label(map_frame, text="Altitude:").grid(row=6, column=0, sticky="w", pady=5)
+        ttk.Entry(map_frame, textvariable=self.map_altitude).grid(row=6, column=1, sticky="ew", padx=5)
+        
+        # Generate Map button
+        ttk.Button(map_frame, text="Generate Map", command=self.generate_map).grid(row=7, column=1, pady=10)
+        
+        map_frame.grid_columnconfigure(1, weight=1)
 
         main_frame.grid_columnconfigure(0, weight=1)
 
@@ -1189,6 +1241,60 @@ class MountainCirclesGUI:
             messagebox.showinfo("No Calculation",
                                 "No calculation has been done for the current use case.\n"
                                 "Please run processing first.")
+
+    def generate_map(self):
+        """Call generate_map.py functionality via direct import in a separate thread.
+        Activate the Run tab to display console output."""
+        # Activate the Run tab so that redirected console output is visible.
+        self.notebook.select(self.run_tab)
+        self.clear_log()  # Clear any existing text in the status box.
+        
+        input_topo = self.map_input_topo.get()
+        output_mbtiles = self.map_output_mbtiles.get()
+        # Retrieve the GeoJSON bounds file (if provided)
+        bounds = self.map_bounds.get().strip() or None
+        
+        try:
+            z_factor_slopes = float(self.map_z_factor_slopes.get().strip())
+        except ValueError:
+            z_factor_slopes = 1.4
+        try:
+            z_factor_shades = float(self.map_z_factor_shades.get().strip())
+        except ValueError:
+            z_factor_shades = 2
+        try:
+            azimuth = float(self.map_azimuth.get().strip())
+        except ValueError:
+            azimuth = 315
+        try:
+            altitude = float(self.map_altitude.get().strip())
+        except ValueError:
+            altitude = 45
+
+        # Validate required fields.
+        if not input_topo or not output_mbtiles:
+            messagebox.showerror("Error", "Input Topo and Output MBTiles files are required.")
+            return
+
+        # Launch map generation in a separate thread.
+        thread = threading.Thread(
+            target=self.run_generate_map_thread,
+            args=(input_topo, output_mbtiles, bounds, z_factor_slopes, z_factor_shades, azimuth, altitude)
+        )
+        thread.daemon = True
+        thread.start()
+
+    def run_generate_map_thread(self, input_topo, output_mbtiles, bounds, z_factor_slopes, z_factor_shades, azimuth, altitude):
+        """Worker function running in a separate thread to call run_generate_map()."""
+        try:
+            from utils.generate_map import run_generate_map
+            run_generate_map(input_topo, output_mbtiles, bounds=bounds,
+                             z_factor_slopes=z_factor_slopes, z_factor_shades=z_factor_shades, azimuth=azimuth, altitude=altitude)
+            # Schedule a success message to be shown from the main thread.
+            self.root.after(0, lambda: messagebox.showinfo("Success", "Map generated successfully!"))
+        except Exception as e:
+            # Schedule an error message to be shown from the main thread.
+            self.root.after(0, lambda: messagebox.showerror("Error", f"Map generation failed: {e}"))
 
     class TextRedirector:
         """Redirect stdout and stderr to the text widget with thread safety."""

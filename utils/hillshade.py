@@ -53,20 +53,16 @@ def read_asc(filepath):
     return header, data
 
 
-def resample_to_metric(header, data, cellsize_new=100):
+def resample_to_metric(header, data, cellsize_new=100, subset_bounds=None):
     """
     Resamples an input DEM (data with header information) from EPSG:4326 to a new regular grid
     in EPSG:3857 (metric) with a target cellsize (default 100 m).
-    
-    The method:
-      - Computes the 4326 coordinates of the grid's corners (taking the pixel centers),
-      - Transforms to EPSG:3857 and builds a new bounding box,
-      - Constructs a new grid (with TOP row first) with a specified cellsize,
-      - For each new grid cell (its center) the coordinates are back-projected to 4326 and
-        the original DEM is sampled using bilinear interpolation.
-      
+
+    If subset_bounds is provided, it should be a tuple of (min_lon, min_lat, max_lon, max_lat) in EPSG:4326.
+    The resampling will be applied only to the intersection of the original DEM's center coordinates and subset_bounds.
+
     Returns:
-       new_dem (np.ndarray): The resampled DEM (in metric CRS).
+       new_dem (np.ndarray): The resampled DEM (in metric CRS) for the specified subset.
        dem_transform (tuple): (x_origin, y_origin, cellsize, ncols, nrows) where x_origin is the left
                               and y_origin is the top of the new grid.
        bbox_3857 (tuple): (min_x, min_y, max_x, max_y) of the new metric grid.
@@ -87,16 +83,29 @@ def resample_to_metric(header, data, cellsize_new=100):
     # For column centers, use: x = xllcorner + (col + 0.5)*cellsize.
     # For row centers (with row 0 at top), the Y coordinate of row i is:
     #     y = top_origin - (i + 0.5)*cellsize.
-    lon_min = xll + 0.5 * cellsize_orig
-    lon_max = xll + (ncols - 0.5) * cellsize_orig
-    lat_top = top_origin - 0.5 * cellsize_orig  # row 0 center
-    lat_bottom = yll + 0.5 * cellsize_orig       # last row center
+    full_lon_min = xll + 0.5 * cellsize_orig
+    full_lon_max = xll + (ncols - 0.5) * cellsize_orig
+    full_lat_top = top_origin - 0.5 * cellsize_orig  # row 0 center
+    full_lat_bottom = yll + 0.5 * cellsize_orig       # last row center
+
+    if subset_bounds:
+        # Expect subset_bounds = (min_lon, min_lat, max_lon, max_lat)
+        new_lon_min = max(full_lon_min, subset_bounds[0])
+        new_lon_max = min(full_lon_max, subset_bounds[2])
+        # Note: for latitude, the "top" is the maximum value.
+        new_lat_top = min(full_lat_top, subset_bounds[3])
+        new_lat_bottom = max(full_lat_bottom, subset_bounds[1])
+    else:
+        new_lon_min = full_lon_min
+        new_lon_max = full_lon_max
+        new_lat_top = full_lat_top
+        new_lat_bottom = full_lat_bottom
 
     corners = np.array([
-        [lon_min, lat_top],    # top-left
-        [lon_max, lat_top],    # top-right
-        [lon_min, lat_bottom], # bottom-left
-        [lon_max, lat_bottom]  # bottom-right
+        [new_lon_min, new_lat_top],    # top-left
+        [new_lon_max, new_lat_top],    # top-right
+        [new_lon_min, new_lat_bottom], # bottom-left
+        [new_lon_max, new_lat_bottom]  # bottom-right
     ])
 
     # Transform corners from EPSG:4326 to EPSG:3857.
@@ -141,7 +150,7 @@ def resample_to_metric(header, data, cellsize_new=100):
     return new_dem, (x_origin, y_origin, cellsize_new, new_ncols, new_nrows), (min_x, min_y, max_x, max_y)
 
 
-def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor=1.0):
+def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor_shades=2.0):
     """
     Computes a hillshade (illumination) raster from an input DEM.
     
@@ -150,13 +159,13 @@ def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor=1.0):
       cellsize - spacing in meters (both x and y)
       azimuth  - Sun azimuth angle in degrees (default: 315)
       altitude - Sun altitude angle in degrees (default: 45)
-      z_factor - Scaling factor applied to elevation values (default: 1.0)
+      z_factor_shades - Scaling factor applied to elevation values for shades (default: 2)
     
     The hillshade is computed via:
         hillshade = 255 * (cos(alt_rad)*cos(slope) +
                            sin(alt_rad)*sin(slope)*cos(az_rad - aspect))
     where the slope is computed as:
-        slope = arctan(z_factor * sqrt((dz/dx)² + (dz/dy)²))
+        slope = arctan(z_factor_shades * sqrt((dz/dx)² + (dz/dy)²))
     and the gradients are obtained via np.gradient.
     
     Returns:
@@ -167,8 +176,8 @@ def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor=1.0):
     # Compute gradients.
     dy, dx = np.gradient(dem, cellsize, cellsize)
     # Apply z-factor when computing the slope.
-    # slope = np.arctan(z_factor * np.sqrt(dx ** 2 + dy ** 2))
-    slope = np.arctan(2 * np.sqrt(dx ** 2 + dy ** 2))
+    # slope = np.arctan(z_factor_shades * np.sqrt(dx ** 2 + dy ** 2))
+    slope = np.arctan(z_factor_shades * np.sqrt(dx ** 2 + dy ** 2))
     # Compute aspect: 0 = north.
     aspect = np.arctan2(-dx, dy)
     aspect = np.where(aspect < 0, 2 * np.pi + aspect, aspect)
@@ -180,42 +189,6 @@ def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor=1.0):
     return hs
 
 
-# def compute_hillshade_multidirectional_additive(dem, cellsize, altitude=45, z_factor=1.0):
-#     """
-#     Computes a multidirectional hillshade by summing the hillshade contributions from 
-#     eight azimuth angles (0°, 45°, ..., 315°) and then linearly normalizing the result
-#     so that the lowest pixel becomes 0 and the highest becomes 255.
-    
-#     Parameters:
-#       dem      - 2D numpy array representing elevation values.
-#       cellsize - Horizontal cell size in meters.
-#       altitude - Sun altitude angle in degrees (default: 45).
-#       z_factor - Scaling factor applied to elevation values (default: 1.0).
-    
-#     Returns:
-#       A uint8 numpy array with values 0–255 representing the normalized multidirectional hillshade.
-#     """
-#     alt_rad = np.radians(altitude)
-#     dy, dx = np.gradient(dem, cellsize, cellsize)
-#     # Use z_factor when computing the slope.
-#     slope = np.arctan(z_factor * np.sqrt(dx**2 + dy**2))
-#     aspect = np.arctan2(-dx, dy)
-#     aspect = np.where(aspect < 0, 2 * np.pi + aspect, aspect)
-    
-#     # Define eight azimuth angles: 0, 45, 90, ... 315 degrees.
-#     azimuth_angles = np.radians(np.arange(0, 360, 45))
-#     hs_sum = np.zeros_like(dem, dtype=float)
-    
-#     # Sum hillshade values for each azimuth angle.
-#     for az in azimuth_angles:
-#         hs = (np.cos(alt_rad) * np.cos(slope) +
-#               np.sin(alt_rad) * np.sin(slope) * np.cos(az - aspect))
-#         hs_sum += hs
-    
-#     hs_normalized = (hs_sum - hs_sum.min()) / (hs_sum.max() - hs_sum.min()) * 255
-#     hs_normalized = hs_normalized.astype(np.uint8)
-    
-#     return hs_normalized
 
 
 def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
@@ -332,18 +305,18 @@ def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
     print(f"MBTiles file saved to {output_path}")
 
 
-def compute_normalized_slope(dem, cellsize, z_factor=1.0):
+def compute_normalized_slope(dem, cellsize, z_factor_slopes=1.0):
     """
     Computes slope from a DEM and normalizes it between 0 and 255.
     The slope is calculated using the gradient of the DEM (in radians),
-    i.e. slope = arctan(z_factor * sqrt((dz/dx)² + (dz/dy)²)).
+    i.e. slope = arctan(z_factor_slopes * sqrt((dz/dx)² + (dz/dy)²)).
     The resulting slope image is then normalized so that the minimum slope becomes 0
     and the maximum becomes 255.
     
     Parameters:
       dem      - 2D numpy array representing elevation values.
       cellsize - The horizontal resolution (in meters) of the DEM.
-      z_factor - Scaling factor applied to elevation values (default: 1.0).
+      z_factor_slopes - Scaling factor applied to elevation values for slopes (default: 1.0).
     
     Returns:
       A 2D uint8 numpy array where each pixel holds the normalized slope value.
@@ -351,7 +324,7 @@ def compute_normalized_slope(dem, cellsize, z_factor=1.0):
     # Compute gradients (dy along rows, dx along columns).
     dy, dx = np.gradient(dem, cellsize, cellsize)
     # Calculate slope (radians) with z-factor adjustment.
-    slope = np.arctan(z_factor * np.sqrt(dx**2 + dy**2))
+    slope = np.arctan(z_factor_slopes * np.sqrt(dx**2 + dy**2))
     # Normalize the slope values linearly so that min->0 and max->255.
     norm_slope = (slope - slope.min()) / (slope.max() - slope.min()) * 255
     return norm_slope.astype(np.uint8)
@@ -389,8 +362,10 @@ def main():
                         help="Minimum zoom level for MBTiles (default: 1)")
     parser.add_argument("--max_zoom", type=int, default=12,
                         help="Maximum zoom level for MBTiles (default: 12)")
-    parser.add_argument("--z_factor", type=float, default=1.4,
-                        help="Z-factor to scale elevation values (default: 1.4)")
+    parser.add_argument("--z_factor_slopes", type=float, default=1.4,
+                        help="Z-factor to scale elevation values for slopes (default: 1.4)")
+    parser.add_argument("--z_factor_shades", type=float, default=2,
+                        help="Z-factor to scale elevation values for shades (default: 2)")
     parser.add_argument("--azimuth", type=float, default=315,
                         help="Sun azimuth angle in degrees for standard hillshade (default: 315)")
     parser.add_argument("--altitude", type=float, default=45,
@@ -423,11 +398,11 @@ def main():
     standard_hillshade = compute_hillshade(new_dem, args.cellsize,
                                              azimuth=args.azimuth,
                                              altitude=args.altitude,
-                                             z_factor=args.z_factor)
+                                             z_factor_shades=args.z_factor_shades)
     print("Computed standard hillshade from DEM.")
 
     # Compute the normalized slope map.
-    slope_map = compute_normalized_slope(new_dem, args.cellsize, z_factor=args.z_factor)
+    slope_map = compute_normalized_slope(new_dem, args.cellsize, z_factor_slopes=args.z_factor_slopes)
     # Invert the slope map so that high slope areas become dark.
     inverted_slope_map = 255 - slope_map
     print("Computed normalized and inverted slope map from DEM.")

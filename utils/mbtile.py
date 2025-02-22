@@ -165,7 +165,7 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file, hillshad
         for x in range(min_x, max_x + 1):
             for y in range(min_y, max_y + 1):
                 current_tile += 1
-                print(f"Processing tile {current_tile}/{total_tiles} (z{zoom}/x{x}/y{y})")
+                # print(f"Processing tile {current_tile}/{total_tiles} (z{zoom}/x{x}/y{y})")
                 
                 # Using caching for OSM tiles
                 osm_data = get_tile(zoom, x, y, osm_server, "osm")

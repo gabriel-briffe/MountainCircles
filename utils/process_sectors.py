@@ -37,7 +37,7 @@ def pixel_to_map(contour, xllcorner, yllcorner, cellsize, nrows):
         map_coords.append((x, y))
     return map_coords
 
-def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_attempts=10000):
+def topological_coloring(polygons, number_of_colors, buffer_distance=3000, max_attempts=10000):
     n = len(polygons)
     # Build a graph based on the buffered polygons.
     buffered_polygons = [poly.buffer(buffer_distance) for poly in polygons]
@@ -80,8 +80,8 @@ def topological_coloring(polygons, number_of_colors, buffer_distance=4000, max_a
 
     # Try to assign colors using backtracking. If it fails within our allowed attempts, use fallback.
     if not assign_colors(0):
-        log_output("Warning : Could not ensure two neighbouring sectors always have different colors; attempting fallback coloring.", output_queue)
-        log_output("Warning : Buffer is probably too high; try again with a smaller buffer if not happy with the result.", output_queue)
+        print("Warning : Could not ensure two neighbouring sectors always have different colors; attempting fallback coloring.")
+        print("Warning : Buffer is probably too high; try again with a smaller buffer if not happy with the result.")
         for node in range(len(polygons)):
             if node not in colors:
                 # Determine colors already used among the node's neighbours.
