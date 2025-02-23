@@ -15,7 +15,7 @@ import pandas as pd
 
 from app_settings import AppSettings
 from utils.cupConvert import convert_coord
-import launch
+import launch,launch2
 
 
 class MountainCirclesGUI:
@@ -84,7 +84,7 @@ class MountainCirclesGUI:
         self.gurumaps_styles = tk.BooleanVar(value=False)
         self.export_passes = tk.BooleanVar(value=False)
         self.clean_temporary_raster_files = tk.BooleanVar(value=False)
-
+        self.beta = tk.BooleanVar(value=False)
 
         # self.input_crs = ""
         # self.GMstyles_folder_path = ""
@@ -295,12 +295,13 @@ class MountainCirclesGUI:
                         variable=self.export_passes).grid(row=12, column=0, sticky="w")
         ttk.Checkbutton(param_frame, text="Clean temporary files",
                         variable=self.clean_temporary_raster_files).grid(row=13, column=0, sticky="w")
+        ttk.Checkbutton(param_frame, text="Beta", variable=self.beta).grid(row=14, column=0, sticky="w")
 
         param_frame.grid_columnconfigure(1, weight="1")
 
         # Control buttons frame
         control_btn_frame = ttk.Frame(main_frame)
-        control_btn_frame.grid(row=14, column=0, columnspan=3, pady=10)
+        control_btn_frame.grid(row=15, column=0, columnspan=3, pady=10)
         
         ttk.Button(control_btn_frame, text="Clear Log",
                    command=self.clear_log).pack(side=tk.LEFT, padx=5)
@@ -324,13 +325,13 @@ class MountainCirclesGUI:
         
         # Status display area
         ttk.Label(main_frame, text="Status:", font=('Arial', 10, 'bold')).grid(
-            row=15, column=0, sticky="w", pady=5)
+            row=16, column=0, sticky="w", pady=5)
         self.status_text = tk.Text(main_frame)
         self.status_text.grid(
-            row=16, column=0, columnspan=3, pady=5, sticky="nsew")
+            row=17, column=0, columnspan=3, pady=5, sticky="nsew")
         scroller = ttk.Scrollbar(
             main_frame, orient=tk.VERTICAL, command=self.status_text.yview)
-        scroller.grid(row=16, column=3, sticky="ns")
+        scroller.grid(row=17, column=3, sticky="ns")
         self.status_text['yscrollcommand'] = scroller.set
         
         # Flush any previously captured output from the temporary buffer into the status_text widget.
@@ -343,7 +344,7 @@ class MountainCirclesGUI:
         sys.stderr = MountainCirclesGUI.TextRedirector(self.status_text)
         
         main_frame.grid_columnconfigure(0, weight=1)
-        main_frame.grid_rowconfigure(16, weight=1)
+        main_frame.grid_rowconfigure(17, weight=1)
 
     def setup_utilities_tab(self):
         """Setup the Utilities tab with sections for various utilities."""
@@ -814,10 +815,11 @@ class MountainCirclesGUI:
 
         try:
             multiprocessing.freeze_support()
-            # Debug: log before launching the processing
-            # print("DEBUG: Calling launch.main with config file:", config_path)
-            # Pass the shared output_queue to your launch function
-            launch.main(config_path, output_queue)
+            # Conditionally call launch2.main if beta is checked.
+            if self.beta.get():
+                launch2.main(config_path, output_queue)
+            else:
+                launch.main(config_path, output_queue)
             self.root.after(0, self.processing_complete)
         except Exception as e:
             error_message = str(e)  # Capture the error message

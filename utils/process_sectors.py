@@ -210,6 +210,119 @@ def main(config, buffer_distance, number_of_colors, simplify_tolerance):
     print(f"Sectors raster moved to {normJoin(sectors_raster_folder, config.sectors_filename)}")
 
 
+def main2(config, buffer_distance, number_of_colors, simplify_tolerance):
+
+    grid, dimensions, coords, nodata_value, all_values = read_asc(config)
+    ncols, nrows = dimensions
+    xllcorner, yllcorner, cellsize = coords
+
+    # Set default simplify_tolerance if not provided.
+    if simplify_tolerance is None:
+        simplify_tolerance = cellsize * 3
+
+
+    # Prepare the coordinate transformer: from the initial custom CRS to EPSG:4326.
+    # source_crs = pyproj.CRS(config.CRS)
+    # target_crs = pyproj.CRS("EPSG:4326")
+    # transformer = pyproj.Transformer.from_crs(source_crs, target_crs, always_xy=True)
+    # project = transformer.transform
+
+    # Lists to accumulate merged multipolygons (one per unique v) and their associated id (v)
+    all_donuts = []
+    all_ids = []
+    nb_values = len(all_values)
+    # Process each unique value (ignoring nodata_value)
+    for v in all_values:
+        # print(f"Processing sector: {v}/{nb_values}", end='\r', flush=True)
+        if v == nodata_value:
+            continue
+
+        mask_v = (grid == v).astype(int)
+        contours = measure.find_contours(mask_v, 0.5)
+        if not contours:
+            continue
+
+        polygons = []
+        for contour in contours:
+            # Convert contour points from pixel to map coordinates.
+            map_contour = pixel_to_map(contour, xllcorner, yllcorner, cellsize, nrows)
+            polygons.append(Polygon(map_contour))
+
+        # Keep only the polygons whose area is greater than 500000.
+        polygons = [p for p in polygons if p.area > 0.0001]
+        # Simplify the polygons.
+        polygons = [p.simplify(tolerance=simplify_tolerance) for p in polygons]
+
+        def find_donuts(polygons):
+            donuts = []
+            while polygons:
+                outer_polygon = polygons.pop(0)  # Assume the first (largest) is outer.
+                holes = []
+                remaining_polygons = []
+                for poly in polygons:
+                    if outer_polygon.contains(poly):
+                        holes.append(poly)
+                    else:
+                        remaining_polygons.append(poly)
+                donut = outer_polygon
+                for hole in holes:
+                    donut = donut.difference(hole)
+                donuts.append(donut)
+                polygons = remaining_polygons  # Continue processing the remaining polygons
+            return donuts
+
+        donuts = find_donuts(polygons)
+
+        if donuts:
+            merged_donut = unary_union(donuts)
+            all_donuts.append(merged_donut)
+            all_ids.append(int(v))
+    print("all sectors vectorized, going to color them")
+
+    # Use topological coloring on the merged geometries with custom neighbour selection.
+    all_features = []
+    if all_donuts:
+        color_mapping = topological_coloring(all_donuts, number_of_colors)
+        # Transform the geometries just before writing to file.
+        for i, donut in enumerate(all_donuts):
+            # transformed_geom = transform(project, donut)
+            feature = {
+                "type": "Feature",
+                "geometry": mapping(donut),
+                "properties": {
+                    "color_id": color_mapping[i] if i in color_mapping else number_of_colors
+                }
+            }
+            all_features.append(feature)
+
+    # Merge all features into a single GeoJSON FeatureCollection.
+    geojson = {
+        "type": "FeatureCollection",
+        "features": all_features
+    }
+    with open(config.sectors1_filepath, "w") as f:
+        json.dump(geojson, f, indent=2)
+    print(f"Sectors saved to {config.sectors1_filepath}")
+
+    # copy out_file to config.sectors2_filepath
+    shutil.copy(config.sectors1_filepath, config.sectors2_filepath)
+    print(f"Sectors saved to {config.sectors2_filepath}")
+
+        # copy config.sector1_style_path and config.sector2_style_path to sectors1_style_filepath and sectors2_style_filepath
+    if config.gurumaps_styles:    
+        shutil.copy(config.sector1_style_path, config.sectors1_style_filepath)
+        shutil.copy(config.sector2_style_path, config.sectors2_style_filepath)
+        print(f"Sectors style files saved to {config.sectors1_style_filepath} and {config.sectors2_style_filepath}")
+
+    #move sectors.asc to sector_raster/config.sectors_name.asc
+    # print(f"moving sectors.asc to sector_raster/{config.sectors_name}.asc")
+    sectors_raster_folder = normJoin(config.calculation_folder_path, "sector_raster")
+    if not os.path.exists(sectors_raster_folder):
+        os.makedirs(sectors_raster_folder)
+    shutil.move(config.sectors_filepath, normJoin(sectors_raster_folder, config.sectors_filename))
+    # print(f"Sectors raster moved to {normJoin(sectors_raster_folder, config.sectors_filename)}")
+
+
 if __name__ == "__main__":
     
     config = sys.argv[1]

@@ -10,8 +10,8 @@ from src.shortcuts import normJoin
 class Airfield:
     def __init__(self, parts):
         self.name = parts[0]
-        self.x = parts[1]
-        self.y = parts[2]
+        self.x = float(parts[1])
+        self.y = float(parts[2])
 
 
 
@@ -21,6 +21,7 @@ class Airfields4326:
         self.destinationCRS = config.CRS  
         # print(f"DEBUG: Destination CRS: {self.destinationCRS}")
         self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
+        self.list_of_airfields = [airfield for airfield in read_airfields(self.filePath)]
         csv_to_geojson(config)
 
 

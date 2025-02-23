@@ -85,6 +85,81 @@ def generate_contours_from_asc(inThisFolder, config, ASCfilePath, contourFileNam
         log_output(f"An error occurred: {e}", output_queue)
         
 
+def generate_contours_from_asc2(inThisFolder, config, ASCfilePath, contourFileName, output_queue=None):
+    """
+    Generates contour lines from an ASCII Grid (.asc) file using NumPy and scikit-image.
+    Contours are generated from 0 to max elevation with the given interval.
+    CRS is the original custom CRS of the topography file.
+    """
+    try:
+        # Read the ASC file
+        with open(ASCfilePath, 'r') as f:
+            header = [next(f).strip().split() for _ in range(6)]
+            data = np.loadtxt(f)
+
+        # Extract header information
+        ncols = int(header[0][1])
+        nrows = int(header[1][1])
+        xllcorner = float(header[2][1])
+        yllcorner = float(header[3][1])
+        cellsize = float(header[4][1])
+        nodata_value = float(header[5][1])
+
+        # Replace NoData values with NaN for proper handling in contouring
+        data[data == nodata_value] = np.nan
+
+        # Print min and max values for debugging (if needed)
+        data_min = np.nanmin(data)
+        data_max = np.nanmax(data)
+
+        # NOTE: Make sure that the contour interval is positive.
+        # Using 'min' with nodata_value may be incorrect if nodata_value is very low.
+        contour_levels = np.arange(0, data_max + config.contour_height, config.contour_height)
+
+        # Instead of computing all contours then zipping over them with a list comprehension
+        # that re-calls find_contours, simply iterate over each contour level and process immediately.
+        contour_geometries = []
+        contour_elevations = []
+
+        for level in contour_levels:
+            contours = skimage.measure.find_contours(data, level)
+            for contour in contours:
+                lines = []
+                for point in contour:
+                    # Each point is in (row, col) coordinates (y, x)
+                    y, x = point
+                    # Convert pixel coordinates to metric coordinates
+                    metric_x = xllcorner + (x * cellsize)
+                    # Invert the y-axis to match metric coordinates
+                    metric_y = yllcorner + ((nrows - y - 1) * cellsize)
+                    lines.append((metric_x, metric_y))
+                # Create a LineString geometry for the contour
+                line = LineString(lines)
+                contour_geometries.append(line)
+                contour_elevations.append(level)
+
+        # Build GeoJSON features from the contour geometries and elevations.
+        features = []
+        for geometry, elevation in zip(contour_geometries, contour_elevations):
+            feature = Feature(
+                geometry=GeoJSONLineString(geometry.coords),
+                properties={"ELEV": str(int(elevation))}
+            )
+            features.append(feature)
+
+        # Create a FeatureCollection and write it to a GeoJSON file.
+        feature_collection = FeatureCollection(features)
+        geojson_path = normJoin(inThisFolder, f'{contourFileName}_noAirfields.geojson')
+
+        with open(geojson_path, 'w') as f:
+            json.dump(feature_collection, f)
+
+        log_output(f"Contours created successfully for {contourFileName}", output_queue)
+
+    except Exception as e:
+        log_output(f"An error occurred: {e}", output_queue)
+
+
 def create4326geosonContours(inThisFolder, config, contourFileName, output_queue=None):
     """
     Convert contours from custom CRS to GeoJSON in EPSG:4326 without GeoPandas.
@@ -178,8 +253,8 @@ def merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, out
         with open(merged_geojson_path, 'w') as f:
             json.dump(merged_geojson, f, separators=(',', ':'))
 
-        log_output(
-            f"{contourFileName} : Airfields added to contours.", output_queue)
+        # log_output(
+        #     f"{contourFileName} : Airfields added to contours.", output_queue)
 
     except FileNotFoundError as e:
         log_output(f"File not found: {e}", output_queue)
@@ -205,6 +280,14 @@ def postProcess(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName
     generate_contours_from_asc(
         inThisFolder, config, ASCfilePath, contourFileName, output_queue)
     create4326geosonContours(inThisFolder, config, contourFileName, output_queue)
+    merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, output_queue)
+    if (config.gurumaps_styles):
+        copyMapCss(toThatFolder, config, contourFileName, "", output_queue)
+
+def postProcess2(inThisFolder, toThatFolder, config, ASCfilePath, contourFileName, output_queue=None):
+    generate_contours_from_asc2(
+        inThisFolder, config, ASCfilePath, contourFileName, output_queue)
+    # create4326geosonContours(inThisFolder, config, contourFileName, output_queue)
     merge_geojson_files(inThisFolder, toThatFolder, config, contourFileName, output_queue)
     if (config.gurumaps_styles):
         copyMapCss(toThatFolder, config, contourFileName, "", output_queue)
