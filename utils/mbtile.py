@@ -5,8 +5,9 @@ import os
 from PIL import Image, ImageEnhance, ImageChops
 import io
 import numpy as np
-from scipy.ndimage import gaussian_filter
+# from scipy.ndimage import gaussian_filter
 import geojson
+from src.shortcuts import normJoin
 
 def deg2num(lat_deg, lon_deg, zoom):
     lat_rad = math.radians(lat_deg)
@@ -29,8 +30,8 @@ def get_tile(z, x, y, tile_server, tile_type):
     
     The cache folder structure will be: cache/<tile_type>/<zoom>/<x>/<y>.png
     """
-    cache_dir = os.path.join("cache", tile_type, str(z), str(x))
-    cache_path = os.path.join(cache_dir, f"{y}.png")
+    cache_dir = normJoin("cache", tile_type, str(z), str(x))
+    cache_path = normJoin(cache_dir, f"{y}.png")
     
     if os.path.exists(cache_path):
         print(f"Loaded cached {tile_type} tile: z{z}/x{x}/y{y}")

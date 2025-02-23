@@ -8,9 +8,20 @@ from src.shortcuts import normJoin
 from src.logging import log_output 
 
 def read_asc(filepath):
-    # [Unchanged, kept for context]
+    """
+    Reads an ASC file, trims edges filled with nodata_value, and adjusts header information accordingly.
+
+    Args:
+        filepath (str): Path to the ASC file.
+
+    Returns:
+        tuple:
+            header (dict): Updated header information after trimming.
+            data (np.ndarray): Trimmed DEM data as a 2D NumPy array.
+    """
     header = {}
     with open(filepath, "r") as f:
+        # Read and parse header lines
         for _ in range(6):
             line = f.readline().strip()
             if not line:
@@ -20,9 +31,86 @@ def read_asc(filepath):
             if key_lower in ["ncols", "nrows", "nodata_value"]:
                 header[key_lower] = int(value)
             elif key_lower in ["xllcorner", "yllcorner", "cellsize"]:
-                header[key_lower] = np.float32(value)
+                header[key_lower] = float(value)  # Changed from np.float32 to float for consistency
+
+        # Load DEM data
         data = np.loadtxt(f, dtype=np.float32)
-    return header, data
+
+    nodata_value = header.get("nodata_value", -9999)  # Default nodata_value if not specified
+
+    # Function to trim edges
+    def trim_edges(data, header, nodata_value):
+        """
+        Trims rows and columns from the edges of the data matrix that are entirely filled with nodata_value.
+        Adjusts the header accordingly for left and bottom trims.
+
+        Args:
+            data (np.ndarray): 2D array of DEM data.
+            header (dict): Header information.
+            nodata_value (int or float): Value representing no data.
+
+        Returns:
+            tuple:
+                trimmed_data (np.ndarray): Trimmed DEM data.
+                trimmed_header (dict): Updated header information.
+        """
+        trimmed_data = data.copy()
+        trimmed_header = header.copy()
+
+        # Initialize trim flags
+        trim_top = True
+        trim_bottom = True
+        trim_left = True
+        trim_right = True
+
+        # Trim top rows
+        while trim_top and trimmed_data.shape[0] > 0:
+            if np.all(trimmed_data[0, :] == nodata_value):
+                trimmed_data = trimmed_data[1:, :]
+                trimmed_header["nrows"] -= 1
+                # trimmed_header["yllcorner"] += trimmed_header["cellsize"]
+                # Adjust if yllcorner is adjusted multiple times
+            else:
+                trim_top = False  # Stop trimming top if current top row is not all nodata_value
+
+        # Trim bottom rows
+        while trim_bottom and trimmed_data.shape[0] > 0:
+            if np.all(trimmed_data[-1, :] == nodata_value):
+                trimmed_data = trimmed_data[:-1, :]
+                trimmed_header["nrows"] -= 1
+                trimmed_header["yllcorner"] += trimmed_header["cellsize"]
+            else:
+                trim_bottom = False  # Stop trimming bottom if current bottom row is not all nodata_value
+
+        # Trim left columns
+        while trim_left and trimmed_data.shape[1] > 0:
+            if np.all(trimmed_data[:, 0] == nodata_value):
+                trimmed_data = trimmed_data[:, 1:]
+                trimmed_header["ncols"] -= 1
+                trimmed_header["xllcorner"] += trimmed_header["cellsize"]
+                # Adjust if xllcorner is adjusted multiple times
+            else:
+                trim_left = False  # Stop trimming left if current left column is not all nodata_value
+
+        # Trim right columns
+        while trim_right and trimmed_data.shape[1] > 0:
+            if np.all(trimmed_data[:, -1] == nodata_value):
+                trimmed_data = trimmed_data[:, :-1]
+                trimmed_header["ncols"] -= 1
+                # xllcorner remains unchanged when trimming right
+            else:
+                trim_right = False  # Stop trimming right if current right column is not all nodata_value
+
+        return trimmed_data, trimmed_header
+
+    # Apply trimming
+    trimmed_data, trimmed_header = trim_edges(data, header, nodata_value)
+
+    # Handle cases where all data might be trimmed
+    if trimmed_data.size == 0:
+        raise ValueError(f"All data in {filepath} is filled with nodata_value ({nodata_value}).")
+
+    return trimmed_header, trimmed_data
 
 def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bounds=None, output_queue=None):
     """
@@ -172,6 +260,7 @@ def main(airfield_folder, output_queue=None):
 
     files_to_convert = [("local.asc", "local4326.asc"),
                         ("output_sub.asc", "output_sub4326.asc")]
+    
 
     for input_filename, output_filename in files_to_convert:
         input_path = normJoin(airfield_folder, input_filename)
@@ -181,6 +270,9 @@ def main(airfield_folder, output_queue=None):
             continue
 
         header, data = read_asc(input_path)
+        # remove edges filled with nodata value
+
+        
         new_dem, dem_transform, bbox_wgs84 = resample_from_tm_to_wgs84(header, data, source_crs, output_queue=output_queue)
 
         with open(output_path, "w") as f:
