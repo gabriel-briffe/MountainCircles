@@ -20,8 +20,8 @@ class Airfields4326:
         self.filePath = config.airfield_file_path  
         self.destinationCRS = config.CRS  
         # print(f"DEBUG: Destination CRS: {self.destinationCRS}")
-        self.convertedAirfields = convert_airfields(read_airfields(self.filePath),self.destinationCRS)
-        self.list_of_airfields = [airfield for airfield in read_airfields(self.filePath)]
+        self.list_of_airfields = read_airfields(self.filePath)
+        self.convertedAirfields = convert_airfields(self.list_of_airfields,self.destinationCRS)
         csv_to_geojson(config)
 
 
@@ -29,7 +29,7 @@ class Airfields4326:
 def read_airfields(filename: str) -> List[List]:
     airfields = []
     with open(filename, 'r') as file:
-        print("reading airfields")
+        # print("reading airfields")
         next(file)        # Skip the header line
         for line in file:
             parts = line.split(",")

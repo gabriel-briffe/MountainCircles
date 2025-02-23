@@ -282,7 +282,7 @@ def main2(config, buffer_distance, number_of_colors, simplify_tolerance):
     # Use topological coloring on the merged geometries with custom neighbour selection.
     all_features = []
     if all_donuts:
-        color_mapping = topological_coloring(all_donuts, number_of_colors)
+        color_mapping = topological_coloring(all_donuts, number_of_colors, buffer_distance=0.03)
         # Transform the geometries just before writing to file.
         for i, donut in enumerate(all_donuts):
             # transformed_geom = transform(project, donut)

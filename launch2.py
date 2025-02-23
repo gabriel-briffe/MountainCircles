@@ -25,6 +25,7 @@ def make_individuals(airfield, config, output_queue=None):
     #     return
     # else:
     log_output(f"launching {airfield.name}", output_queue)
+    # start_time = time.time()
 
     try:
         # Create folder for this airfield
@@ -87,10 +88,30 @@ def make_individuals(airfield, config, output_queue=None):
             f"An unexpected error occurred while processing {airfield.name}: {e}", output_queue)
         return  # Catch-all for any other exceptions
 
-
-    # Post-process if all went well
+    # end_time = time.time()
+    # log_output(f"Time taken for {airfield.name}: {end_time - start_time:.2f} seconds", output_queue)
+    # start_time = time.time()
+    
+# make a war function for an individual airfield with output_queue
+def warp_airfield(airfield,config,output_queue):
+    start_time = time.time()
+    airfield_folder = normJoin(config.calculation_folder_path, airfield.name)
+    
     try:
         warp(airfield_folder, output_queue=output_queue)
+        end_time = time.time()
+        log_output(f"Time taken for warp for {airfield.name}: {end_time - start_time:.2f} seconds", output_queue)
+        start_time = time.time()
+    except Exception as e:
+        log_output(
+            f"Error during warp for {airfield.name}: {e}", output_queue)
+
+# make a postprocess function for an individual airfield with output_queue
+def postprocess_airfield(airfield,config,output_queue):
+    # start_time = time.time()
+    airfield_folder = normJoin(config.calculation_folder_path, airfield.name)
+    
+    try:
         ASCfile2 = normJoin(airfield_folder, 'local4326.asc')
         naming = f"{airfield.name}_{config.calculation_name_short}"
         postProcess2(str(airfield_folder), Path(config.calculation_folder_path),
@@ -98,6 +119,17 @@ def make_individuals(airfield, config, output_queue=None):
     except Exception as e:
         log_output(
             f"Error during post-processing for {airfield.name}: {e}", output_queue)
+    # end_time = time.time()
+    # log_output(f"Time taken for post-processing for {airfield.name}: {end_time - start_time:.2f} seconds", output_queue)
+    # start_time = time.time()
+    #     start_time = time.time()
+    #     ASCfile2 = normJoin(airfield_folder, 'local4326.asc')
+    #     naming = f"{airfield.name}_{config.calculation_name_short}"
+    #     postProcess2(str(airfield_folder), Path(config.calculation_folder_path),
+    #                 config, str(ASCfile2), naming, output_queue)
+    # except Exception as e:
+    #     log_output(
+    #         f"Error during post-processing for {airfield.name}: {e}", output_queue)
 
 
 def clean(config):
@@ -157,13 +189,13 @@ def main(use_case_file, output_queue=None):
 
     # Load the airfields file using the new use_case settings
     airfields = Airfields4326(use_case).list_of_airfields
-    print([(airfield.name, airfield.x, airfield.y) for airfield in airfields])
-    print("DEBUG: Number of airfields loaded:", len(airfields))
+    # print([(airfield.name, airfield.x, airfield.y) for airfield in airfields])
+    print("Number of airfields loaded:", len(airfields))
 
 
     #discard airfields that are outside the map
     airfields = [airfield for airfield in airfields if use_case.isInside(airfield.x, airfield.y)]
-    print("DEBUG: Number of airfields inside the map:", len(airfields))
+    print("Number of airfields inside the map:", len(airfields))
 
     # create folders for each airfield
     for airfield in airfields:
@@ -174,6 +206,18 @@ def main(use_case_file, output_queue=None):
     # Use multiprocessing to make individual files for each airfield
     with multiprocessing.Pool() as pool:
         pool.starmap(make_individuals, [
+            (airfield, use_case, output_queue) for airfield in airfields
+        ])
+    
+    # Use multiprocessing to warp each airfield with half the number of cores
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()//2) as pool:
+        pool.starmap(warp_airfield, [
+            (airfield, use_case, output_queue) for airfield in airfields
+        ]) 
+    
+    # Use multiprocessing to post-process each airfield
+    with multiprocessing.Pool() as pool:
+        pool.starmap(postprocess_airfield, [
             (airfield, use_case, output_queue) for airfield in airfields
         ])
 
