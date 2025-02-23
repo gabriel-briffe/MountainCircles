@@ -62,6 +62,7 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
                          -cellsize_orig,
                          dtype=np.float32)
     Easting, Northing = np.meshgrid(easting, northing)
+    del easting, northing
 
     # Step 2: Separate valid, zero, and nodata points upfront with vectorized operations
     valid_mask = (data != nodata_value) & (data != 0)
@@ -72,7 +73,7 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
     easting_valid = Easting[valid_mask]
     northing_valid = Northing[valid_mask]
     values_valid = data[valid_mask]
-
+    del data, valid_mask
     # if output_queue:
     #     log_output(f"Valid points (not nodata or 0): {len(values_valid)} out of {data.size}", output_queue)
 
@@ -81,15 +82,18 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
     
     # Transform valid points
     lon_valid, lat_valid = transformer.transform(easting_valid, northing_valid)
+    del easting_valid, northing_valid
     lon_valid = np.array(lon_valid, dtype=np.float32)
     lat_valid = np.array(lat_valid, dtype=np.float32)
     
     # Transform full grid once and pre-flatten for reuse
     lon_full, lat_full = transformer.transform(Easting, Northing)
+    del Easting, Northing
     lon_full = np.array(lon_full, dtype=np.float32)
     lat_full = np.array(lat_full, dtype=np.float32)
     lon_full_flat = lon_full.ravel()
     lat_full_flat = lat_full.ravel()
+    del lon_full, lat_full
 
     # if output_queue:
     #     log_output(f"Valid WGS84 coords: lon range [{lon_valid.min():.4f}, {lon_valid.max():.4f}], lat range [{lat_valid.min():.4f}, {lat_valid.max():.4f}]", output_queue)
@@ -120,9 +124,7 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
     Lon_new = lon_origin + (np.arange(new_ncols, dtype=np.float32) + half) * target_res
     Lat_new = lat_origin - (np.arange(new_nrows, dtype=np.float32) + half) * target_res
     Lon_grid, Lat_grid = np.meshgrid(Lon_new, Lat_new)
-
-    # if output_queue:
-    #     log_output(f"WGS84 target grid shape: {Lon_grid.shape}, lon range [{Lon_new[0]:.4f}, {Lon_new[-1]:.4f}], lat range [{Lat_new[0]:.4f}, {Lat_new[-1]:.4f}]", output_queue)
+    del Lon_new, Lat_new
 
     # Step 5: Fast interpolation of valid points
     new_dem = griddata(
@@ -132,6 +134,7 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
         method='linear',
         fill_value=np.nan
     )
+    del values_valid,lon_valid,lat_valid
     new_dem = np.array(new_dem, dtype=np.float32)
 
     # Step 6: Nearest-neighbor overlay for zeros and nodata using precomputed grids
@@ -142,6 +145,7 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
         method='nearest',
         fill_value=0
     )
+    del zero_mask
     nodata_mask_target = griddata(
         (lon_full_flat, lat_full_flat),
         nodata_mask.ravel().astype(np.float32),
@@ -149,16 +153,13 @@ def resample_from_tm_to_wgs84(header, data, crs, target_res=0.0009, subset_bound
         method='nearest',
         fill_value=1
     )
-
+    del nodata_mask,Lon_grid,Lat_grid, lon_full_flat, lat_full_flat
     # Step 7: Apply masks in-place instead of np.where (Point 1)
     threshold = 0.5
     new_dem[nodata_mask_target > threshold] = nodata_value  # In-place nodata overlay
     new_dem[zero_mask_target > threshold] = 0               # In-place zero overlay
 
     # Step 8: Release intermediate data early (Point 2)
-    del Easting, Northing, lon_full, lat_full, lon_full_flat, lat_full_flat
-    del lon_valid, lat_valid, values_valid, valid_mask, zero_mask, nodata_mask
-    del zero_mask_target, nodata_mask_target
 
     return new_dem, (lon_origin, lat_origin, target_res, new_ncols, new_nrows), (new_lon_min, new_lat_bottom, new_lon_max, new_lat_top)
 
