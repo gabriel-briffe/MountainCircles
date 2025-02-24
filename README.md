@@ -125,6 +125,7 @@ If the calculation script doesn't work, try to recompile the C++ code as is desc
 
 # clean zip from mac
 ```zip -r MountainCirclesData.zip . -x "*.DS_Store" -x "__MACOSX/*" -x ".AppleDouble/*" -x "._*"```
+- for beta, download the original topo file: https://drive.google.com/file/d/1qg3s7FtVTqNam7Vgvm0vQqW3rRYyM_Yo/view?usp=sharing
 
 # Disclaimer:
 
