@@ -208,19 +208,26 @@ def merge_output_rasters2(config, output_filename, sectors_filename, output_queu
         for file in files:
             if file == 'output_sub4326.asc':
                 path = normJoin(root, file)
-                with open(path, 'r') as file_obj:
-                    ncols = int(next(file_obj).split()[1])
-                    nrows = int(next(file_obj).split()[1])
-                    xllcorner = float(next(file_obj).split()[1])
-                    yllcorner = float(next(file_obj).split()[1])
-                    cellsize = float(next(file_obj).split()[1])
-                    all_headers.append((path, ncols, nrows, xllcorner, yllcorner, cellsize))
+
+                # Proceed with reading the header safely
+                try:
+                    with open(path, 'r', encoding='utf-8-sig') as file_obj:
+                        ncols = int(next(file_obj).split()[1])
+                        nrows = int(next(file_obj).split()[1])
+                        xllcorner = float(next(file_obj).split()[1])
+                        yllcorner = float(next(file_obj).split()[1])
+                        cellsize = float(next(file_obj).split()[1])
+                        all_headers.append((path, ncols, nrows, xllcorner, yllcorner, cellsize))
+                except Exception as e:
+                    log_output(f"Error reading header from {path}: {e}", output_queue)
     
     if not all_headers:
         log_output("No output_sub4326.asc files found to merge.", output_queue)
         return
     
+    
     cellsize = all_headers[0][5]
+    log_output(f"number of files to merge: {len(all_headers)}", output_queue)
     
     # Determine the global pixel center extent from all headers
     min_x_center = min(header[3] + cellsize / 2 for header in all_headers)
@@ -240,7 +247,7 @@ def merge_output_rasters2(config, output_filename, sectors_filename, output_queu
     sector = 0
     for path, ncols_sub, nrows_sub, xllcorner, yllcorner, cellsize in all_headers:
         # log output with last folder of path
-        log_output(f"aligning {path.split('/')[-2]}", output_queue)
+        log_output(f"aligning {path}", output_queue)
         
         sub_min_x_center = xllcorner + cellsize / 2
         sub_max_x_center = xllcorner + (ncols_sub - 0.5) * cellsize

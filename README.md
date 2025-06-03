@@ -115,6 +115,57 @@ If the calculation script doesn't work, try to recompile the C++ code as is desc
 - the peaks are a decluttered version of the OSM database, designed to keep only the highest one 5km around
 - the passes were computed to be "all the key points to glide back to an airfield, with L/D 20, 25, 30"
 
+# Downloading Elevation Data
+
+The project includes a utility to download elevation data from OpenTopography's Global DEM API. This allows you to get high-resolution DEM data for any region in the world, split into manageable chunks that can be downloaded and merged together.
+
+### Using batchDownload.py
+
+You can use the utility directly from the command line:
+
+```bash
+python utils/batchDownload.py --north 47.5 --south 46.5 --east 12.5 --west 11.5 \
+                             --dataset SRTM_GL3 --output_dir data/elevation \
+                             --chunk_size 0.5 --format AAIGrid
+```
+
+Parameters:
+- `--north`, `--south`, `--east`, `--west`: Geographic boundaries of the region to download
+- `--dataset`: DEM dataset to use (SRTM_GL3, SRTM_GL1, AW3D30, etc.)
+- `--output_dir`: Directory to save the downloaded files
+- `--chunk_size`: Size of each chunk in degrees (default: 0.5)
+- `--format`: Output format (default: AAIGrid)
+- `--merge`: Add this flag to merge downloaded chunks into a single file
+- `--output_file`: Path for the merged output file (required if --merge is specified)
+
+### Available Datasets
+
+- SRTM_GL3: SRTM GL3 (90m resolution)
+- SRTM_GL1: SRTM GL1 (30m resolution)
+- SRTM_GL1_E: SRTM GL1 Ellipsoidal (30m)
+- AW3D30: ALOS World 3D 30m
+- AW3D30_E: ALOS World 3D Ellipsoidal 30m
+- SRTM15Plus: SRTM15+ (450m)
+- NASADEM: NASADEM (30m)
+- COP30: Copernicus DEM 30m
+- COP90: Copernicus DEM 90m
+
+### Example with Helper Script
+
+For convenience, an example script is provided:
+
+```bash
+# Download a region in the Swiss Alps
+python utils/batchDownload_example.py --alps
+
+# Download a higher resolution dataset for Mont Blanc
+python utils/batchDownload_example.py --mont-blanc
+
+# Download a custom region
+python utils/batchDownload_example.py --custom --north 47.0 --south 46.0 --east 9.0 --west 8.0
+```
+
+The downloaded data can be used for creating your own topography files or for other GIS applications.
 
 
 # to do next

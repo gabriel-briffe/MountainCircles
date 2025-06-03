@@ -221,10 +221,12 @@ def main(use_case_file, output_queue=None):
             (airfield, use_case, output_queue) for airfield in airfields
         ])
 
+    print("finished processing individual airfields")
     # Build the filenames using the new use_case properties.
     sectors_file = f'{use_case.merged_prefix}_{use_case.calculation_name}_sectors.asc'
     merged_file = f'{use_case.merged_prefix}_{use_case.calculation_name}.asc'
-    
+    print(sectors_file)
+    print(merged_file)
     # # Merge the output rasters.
     merge_output_rasters2(use_case, merged_file, sectors_file, output_queue)
     

@@ -265,9 +265,14 @@ def main(airfield_folder, output_queue=None):
     for input_filename, output_filename in files_to_convert:
         input_path = normJoin(airfield_folder, input_filename)
         output_path = normJoin(airfield_folder, output_filename)
+        # if file already warped, skip
+        if os.path.exists(output_path):
+            log_output(f"File {output_path} already exists. Skipping.", output_queue)
+            continue
         if not os.path.exists(input_path):
             log_output(f"File {input_path} does not exist. Skipping.", output_queue)
             continue
+        log_output(f"warping {os.path.basename(input_path)}", output_queue)
 
         header, data = read_asc(input_path)
         # remove edges filled with nodata value
