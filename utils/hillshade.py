@@ -75,6 +75,17 @@ def resample_to_metric(header, data, cellsize_new=100, subset_bounds=None):
     # nodata may be used if needed
     # nodata = header.get("nodata_value", -9999)
 
+    # Ensure data is finite and handle any NaN or infinite values
+    if not np.isfinite(data).all():
+        print("Warning: Found non-finite values in input data, replacing with interpolated values")
+        # Replace NaN/inf with nearest valid values
+        from scipy.ndimage import distance_transform_edt
+        mask = ~np.isfinite(data)
+        if mask.any():
+            # Find nearest valid values
+            indices = distance_transform_edt(mask, return_distances=False, return_indices=True)
+            data = data[tuple(indices)]
+
     # In an ASCII grid the first data row is the top.
     # The top (northern) edge corresponds to:
     top_origin = yll + nrows * cellsize_orig
@@ -146,6 +157,15 @@ def resample_to_metric(header, data, cellsize_new=100, subset_bounds=None):
 
     # Sample the original data. (Using order=1 for bilinear interpolation.)
     new_dem = map_coordinates(data, [src_rows, src_cols], order=1, mode="nearest")
+    
+    # Ensure the result is finite
+    if not np.isfinite(new_dem).all():
+        print("Warning: Non-finite values in resampled DEM, replacing with nearest valid values")
+        mask = ~np.isfinite(new_dem)
+        if mask.any():
+            # Replace with mean of valid values
+            valid_mean = np.nanmean(new_dem[np.isfinite(new_dem)])
+            new_dem[mask] = valid_mean
 
     return new_dem, (x_origin, y_origin, cellsize_new, new_ncols, new_nrows), (min_x, min_y, max_x, max_y)
 
@@ -189,8 +209,6 @@ def compute_hillshade(dem, cellsize, azimuth=315, altitude=45, z_factor_shades=2
     return hs
 
 
-
-
 def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
     """
     Generates an MBTiles file from the slope map raster.
@@ -210,12 +228,19 @@ def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
        min_zoom, max_zoom: Integers for the zoom-level range.
        output_path: Path for the MBTiles output file.
     """
+    from utils.simple_mercator import tile_bounds, lat_lon_to_tile
+    
     x_origin, y_origin, cellsize, ncols, nrows = dem_transform
     # Determine the extent of the slope map in EPSG:3857.
     dem_west = x_origin
     dem_north = y_origin
     dem_east = x_origin + ncols * cellsize
     dem_south = y_origin - nrows * cellsize
+
+    # Convert DEM bounds to geographic coordinates to find tile ranges
+    transformer_inv = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
+    west_lon, south_lat = transformer_inv.transform(dem_west, dem_south)
+    east_lon, north_lat = transformer_inv.transform(dem_east, dem_north)
 
     # Open SQLite connection and create MBTiles tables.
     conn = sqlite3.connect(output_path)
@@ -234,32 +259,33 @@ def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
     )
     conn.commit()
 
-    # Web Mercator full extent (in meters)
-    WEB_MERC_MAX = 20037508.342789244
     tile_size = 256
 
     for z in range(min_zoom, max_zoom + 1):
-        resolution = (2 * WEB_MERC_MAX) / (tile_size * 2 ** z)
-        tile_x_min = int(floor((dem_west + WEB_MERC_MAX) / (tile_size * resolution)))
-        tile_x_max = int(floor((dem_east + WEB_MERC_MAX) / (tile_size * resolution)))
-        tile_y_min = int(floor((WEB_MERC_MAX - dem_north) / (tile_size * resolution)))
-        tile_y_max = int(floor((WEB_MERC_MAX - dem_south) / (tile_size * resolution)))
+        # Find tile range using simple mercator functions
+        min_tile_x, max_tile_y = lat_lon_to_tile(south_lat, west_lon, z)
+        max_tile_x, min_tile_y = lat_lon_to_tile(north_lat, east_lon, z)
+        
+        print(f"Zoom level {z}: tile_x from {min_tile_x} to {max_tile_x}, "
+              f"tile_y from {min_tile_y} to {max_tile_y}")
 
-        print(f"Zoom level {z}: tile_x from {tile_x_min} to {tile_x_max}, "
-              f"tile_y from {tile_y_min} to {tile_y_max}")
-
-        for tx in range(tile_x_min, tile_x_max + 1):
-            for ty in range(tile_y_min, tile_y_max + 1):
-                # Compute tile bounds in EPSG:3857.
-                tile_west = -WEB_MERC_MAX + tx * tile_size * resolution
-                tile_north = WEB_MERC_MAX - ty * tile_size * resolution
-                tile_east = tile_west + tile_size * resolution
-                tile_south = tile_north - tile_size * resolution
+        for tx in range(min_tile_x, max_tile_x + 1):
+            for ty in range(min_tile_y, max_tile_y + 1):
+                # Get tile bounds using simple mercator functions
+                tile_min_lat, tile_min_lon, tile_max_lat, tile_max_lon = tile_bounds(tx, ty, z)
+                
+                # Convert to Web Mercator for pixel calculations
+                transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+                tile_west, tile_south = transformer.transform(tile_min_lon, tile_min_lat)
+                tile_east, tile_north = transformer.transform(tile_max_lon, tile_max_lat)
 
                 # Build a grid of pixel centers for the tile (256×256).
+                resolution_x = (tile_east - tile_west) / tile_size
+                resolution_y = (tile_north - tile_south) / tile_size
+                
                 pixel_indices = np.arange(tile_size) + 0.5
-                tile_xs = tile_west + pixel_indices * resolution
-                tile_ys = tile_north - pixel_indices * resolution
+                tile_xs = tile_west + pixel_indices * resolution_x
+                tile_ys = tile_north - pixel_indices * resolution_y
                 X_tile, Y_tile = np.meshgrid(tile_xs, tile_ys)
 
                 # Sample the slope map using bilinear interpolation.
@@ -284,10 +310,7 @@ def generate_mbtiles(slope_map, dem_transform, min_zoom, max_zoom, output_path):
         conn.commit()
 
     # Insert metadata.
-    transformer_inv = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
-    lon1, lat1 = transformer_inv.transform(dem_west, dem_south)
-    lon2, lat2 = transformer_inv.transform(dem_east, dem_north)
-    bounds = f"{min(lon1, lon2)},{min(lat1, lat2)},{max(lon1, lon2)},{max(lat1, lat2)}"
+    bounds = f"{west_lon},{south_lat},{east_lon},{north_lat}"
     metadata = {
         "name": "Slope Map",
         "type": "overlay",
@@ -310,8 +333,8 @@ def compute_normalized_slope(dem, cellsize, z_factor_slopes=1.0):
     Computes slope from a DEM and normalizes it between 0 and 255.
     The slope is calculated using the gradient of the DEM (in radians),
     i.e. slope = arctan(z_factor_slopes * sqrt((dz/dx)² + (dz/dy)²)).
-    The resulting slope image is then normalized so that the minimum slope becomes 0
-    and the maximum becomes 255.
+    The resulting slope image is then normalized using a fixed range to ensure
+    consistent appearance across different area sizes.
     
     Parameters:
       dem      - 2D numpy array representing elevation values.
@@ -325,15 +348,19 @@ def compute_normalized_slope(dem, cellsize, z_factor_slopes=1.0):
     dy, dx = np.gradient(dem, cellsize, cellsize)
     # Calculate slope (radians) with z-factor adjustment.
     slope = np.arctan(z_factor_slopes * np.sqrt(dx**2 + dy**2))
-    # Normalize the slope values linearly so that min->0 and max->255.
-    norm_slope = (slope - slope.min()) / (slope.max() - slope.min()) * 255
+    
+    # Use fixed normalization range instead of min/max to ensure consistent appearance
+    # Typical slope range for mountainous terrain is 0 to ~1.2 radians (0° to ~70°)
+    max_slope_rad = 1.2  # ~70 degrees, covers most mountainous terrain
+    norm_slope = np.clip(slope / max_slope_rad * 255, 0, 255)
+    
     return norm_slope.astype(np.uint8)
 
 
 def combine_images(standard_hillshade, inverted_slope_map):
     """
     Combines the standard hillshade and the inverted normalized slope map by summing them 
-    and linearly normalizing the result to 0–255.
+    and normalizing the result to 0–255 using a fixed range for consistent appearance.
     
     Parameters:
       standard_hillshade - 2D uint8 numpy array from compute_hillshade.
@@ -343,9 +370,99 @@ def combine_images(standard_hillshade, inverted_slope_map):
       combined_image - 2D uint8 numpy array representing the composite hillshade.
     """
     combined = standard_hillshade.astype(np.float32) + inverted_slope_map.astype(np.float32)
-    # Linearly normalize so that the minimum becomes 0 and the maximum becomes 255.
-    combined_norm = 255 * ((combined - combined.min()) / (combined.max() - combined.min()))
+    
+    # Use fixed normalization range instead of min/max to ensure consistent appearance
+    # Combined values typically range from ~50 to ~450 (two uint8 values summed)
+    # We'll normalize assuming a reasonable range and clip to avoid over/under exposure
+    combined_norm = np.clip(combined / 2.0, 0, 255)  # Divide by 2 to get back to 0-255 range
+    
     return combined_norm.astype(np.uint8)
+
+
+def generate_zoom7_combined_image(composite, dem_transform, tile_x, tile_y, zoom, output_path):
+    """
+    Generate a combined OSM + hillshade image at zoom level 7 for a SINGLE tile.
+    
+    Args:
+        composite: The hillshade composite image (numpy array)
+        dem_transform: DEM transformation parameters
+        tile_x, tile_y: Web mercator tile coordinates
+        zoom: Zoom level
+        output_path: Path to save the combined image
+    """
+    import requests
+    import io
+    from PIL import Image, ImageChops, ImageEnhance
+    from math import floor
+    from pyproj import Transformer
+    from utils.simple_mercator import tile_bounds
+    
+    tile_size = 256
+    x_origin, y_origin, cellsize, ncols, nrows = dem_transform
+    
+    print(f"Generating single tile image for tile ({tile_x}, {tile_y}) at zoom {zoom}")
+    
+    # Get tile bounds using simple mercator functions
+    min_lat, min_lon, max_lat, max_lon = tile_bounds(tile_x, tile_y, zoom)
+    print(f"Tile bounds in geographic: {min_lat:.6f}° to {max_lat:.6f}°N, {min_lon:.6f}° to {max_lon:.6f}°E")
+    
+    # Convert to Web Mercator for pixel calculations
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
+    tile_west, tile_south = transformer.transform(min_lon, min_lat)
+    tile_east, tile_north = transformer.transform(max_lon, max_lat)
+    print(f"Tile bounds in Web Mercator: {tile_west:.0f}, {tile_south:.0f} to {tile_east:.0f}, {tile_north:.0f}")
+    
+    # Download OSM tile
+    osm_url = f"https://a.tile.openstreetmap.org/{zoom}/{tile_x}/{tile_y}.png"
+    try:
+        headers = {'User-Agent': 'MountainCircles/1.0 (https://github.com/user/mountaincircles)'}
+        response = requests.get(osm_url, timeout=10, headers=headers)
+        response.raise_for_status()
+        osm_img = Image.open(io.BytesIO(response.content)).convert('RGB')
+        print(f"Downloaded OSM tile {tile_x},{tile_y}")
+    except Exception as e:
+        print(f"Failed to download OSM tile {tile_x},{tile_y}: {e}")
+        osm_img = Image.new('RGB', (tile_size, tile_size), (240, 240, 240))
+    
+    # Build pixel grid for the tile
+    resolution_x = (tile_east - tile_west) / tile_size
+    resolution_y = (tile_north - tile_south) / tile_size
+    
+    pixel_indices = np.arange(tile_size) + 0.5
+    tile_xs = tile_west + pixel_indices * resolution_x
+    tile_ys = tile_north - pixel_indices * resolution_y
+    X_tile, Y_tile = np.meshgrid(tile_xs, tile_ys)
+    
+    # Sample the hillshade composite
+    from scipy.ndimage import map_coordinates
+    src_cols = (X_tile - x_origin) / cellsize - 0.5
+    src_rows = (y_origin - Y_tile) / cellsize - 0.5
+    
+    # Check sampling bounds
+    valid_cols = (src_cols >= 0) & (src_cols < ncols)
+    valid_rows = (src_rows >= 0) & (src_rows < nrows)
+    valid_pixels = valid_cols & valid_rows
+    valid_percent = 100 * valid_pixels.sum() / valid_pixels.size
+    print(f"Valid pixels: {valid_pixels.sum()}/{valid_pixels.size} ({valid_percent:.1f}%)")
+    
+    tile_data = map_coordinates(composite, [src_rows, src_cols],
+                              order=1, mode="constant", cval=128)
+    tile_data = tile_data.astype(np.uint8)
+    
+    print(f"Tile data range: {tile_data.min()}-{tile_data.max()}, mean: {tile_data.mean():.1f}")
+    
+    # Create hillshade image
+    hillshade_img = Image.fromarray(tile_data, mode="L").convert("RGB")
+    
+    # Combine OSM and hillshade using multiply blend
+    osm_enhanced = ImageEnhance.Contrast(osm_img).enhance(1.0)
+    osm_enhanced = ImageEnhance.Color(osm_enhanced).enhance(1.0)
+    combined_tile = ImageChops.multiply(osm_enhanced, hillshade_img)
+    
+    # Save the single tile image (256x256)
+    combined_tile.save(output_path, 'PNG', optimize=True)
+    print(f"Single tile image saved to {output_path}")
+    print(f"Image size: {tile_size}x{tile_size} pixels")
 
 
 def main():

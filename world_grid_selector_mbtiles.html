@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTiles Zoom 7 World Grid Selector</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: white;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            position: relative;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        
+        .header p {
+            color: #666;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        #map {
+            height: calc(100vh - 120px);
+            width: 100%;
+        }
+        
+        .grid-overlay {
+            pointer-events: none;
+            z-index: 400;
+        }
+        
+        .grid-cell {
+            cursor: pointer;
+            pointer-events: all;
+            fill: rgba(255, 0, 0, 0.1);
+            stroke: #ff0000;
+            stroke-width: 1;
+            fill-opacity: 0;
+        }
+        
+        .grid-cell:hover {
+            fill-opacity: 0.2;
+            stroke-width: 2;
+        }
+        
+        .grid-cell.selected {
+            fill: rgba(255, 0, 0, 0.3) !important;
+            stroke: #ff0000 !important;
+            stroke-width: 3px !important;
+            fill-opacity: 0.3 !important;
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 140px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            z-index: 1000;
+            max-width: 400px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+        
+        .control-panel h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .selected-tiles {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 8px;
+            margin: 10px 0;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .command-output {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            border-radius: 4px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 3px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .tile-info {
+            font-size: 12px;
+            margin: 2px 0;
+            padding: 4px;
+            background: #fff;
+            border-radius: 3px;
+            border: 1px solid #eee;
+        }
+        
+        .instructions {
+            font-size: 11px;
+            color: #666;
+            margin-top: 10px;
+            padding: 8px;
+            background: #f0f8ff;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .stats {
+            font-size: 14px;
+            margin: 10px 0;
+            padding: 8px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .zoom-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            border: 1px solid #ccc;
+        }
+        
+        .layer-selector {
+            margin-bottom: 10px;
+        }
+        
+        .layer-selector label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .layer-selector input[type="radio"] {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MBTiles Zoom 7 World Grid Selector</h1>
+        <p>Interactive OSM map with MBTiles zoom 7 grid overlay (128×128 tiles, each 256×256 pixels)</p>
+        <p>Click on tiles to select them for MBTiles-centric processing</p>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <h3>Map Layer</h3>
+        <div class="layer-selector">
+            <label>
+                <input type="radio" name="layer" value="osm" checked onchange="switchLayer(this.value)">
+                OpenStreetMap
+            </label>
+            <label>
+                <input type="radio" name="layer" value="google" onchange="switchLayer(this.value)">
+                Google Terrain
+            </label>
+        </div>
+        
+        <h3>Selected Tiles</h3>
+        <div class="stats">
+            Selected: <span id="tile-count">0</span> tiles
+        </div>
+        
+        <div class="selected-tiles" id="selected-tiles-list">
+            No tiles selected
+        </div>
+        
+        <button onclick="clearSelection()">Clear All</button>
+        <button onclick="copyCommands()">Copy Commands</button>
+        
+        <h3>Multi-Tile MBTiles Generation</h3>
+        <div class="multi-tile-section">
+            <label for="mbtiles-name">MBTiles Name:</label>
+            <input type="text" id="mbtiles-name" placeholder="e.g., alps_region" style="width: 100%; margin: 5px 0; padding: 5px;">
+            
+            <label for="max-zoom">Max Zoom Level:</label>
+            <select id="max-zoom" style="width: 100%; margin: 5px 0; padding: 5px;">
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12" selected>12</option>
+            </select>
+            
+            <button onclick="generateMultiTileCommand()" style="width: 100%; margin: 10px 0;">Generate Multi-Tile Command</button>
+            
+            <div class="multi-command-output" id="multi-command-output" style="max-height: 100px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; margin: 10px 0; background: #f8f9fa; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; border-radius: 4px;">
+                Select tiles and enter name to generate multi-tile command
+            </div>
+            
+            <button onclick="copyMultiTileCommand()" style="width: 100%; margin: 5px 0;">Copy Multi-Tile Command</button>
+        </div>
+        
+        <h3>Individual Tile Commands</h3>
+        <div class="command-output" id="commands-output">
+            Select tiles to see commands
+        </div>
+        
+        <div class="instructions">
+            <strong>Instructions:</strong><br>
+            • Choose map layer above<br>
+            • Zoom in to see the grid overlay<br>
+            • Click on red grid squares to select tiles<br>
+            • Selected tiles will be highlighted<br>
+            <br>
+            <strong>Multi-Tile MBTiles:</strong><br>
+            • Enter a name for your MBTiles file<br>
+            • Choose max zoom level (7-12)<br>
+            • Generate command for single MBTiles covering selected tiles<br>
+            • Unselected tiles will return no data<br>
+            <br>
+            <strong>Individual Commands:</strong><br>
+            • Each tile generates OSM, hillshade, combined PNGs + MBTiles
+        </div>
+    </div>
+    
+    <div class="zoom-info" id="zoom-info">
+        Zoom: <span id="current-zoom">3</span> | Grid visible at zoom ≥ 2
+    </div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
+
+    <script>
+        // Global variables
+        var map;
+        var selectedTiles = new Set();
+        var gridOverlay = null;
+        var updateTimeout = null;
+        var currentLayer = null;
+        
+        // Initialize map
+        function initMap() {
+            // Create map centered on the world
+            map = L.map('map').setView([20.0, 0.0], 3);
+            
+            // Add initial OSM tiles
+            currentLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Create SVG overlay for grid
+            createGridOverlay();
+            
+            // Update grid when map moves or zooms
+            map.on('move zoom', function() {
+                if (updateTimeout) clearTimeout(updateTimeout);
+                updateTimeout = setTimeout(updateGrid, 50);
+            });
+            
+            map.on('moveend zoomend', function() {
+                updateGrid();
+                updateZoomInfo();
+            });
+            
+            // Initial updates
+            updateGrid();
+            updateZoomInfo();
+        }
+        
+        function createGridOverlay() {
+            // Create SVG overlay
+            var svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svgElement.style.position = 'absolute';
+            svgElement.style.top = '0';
+            svgElement.style.left = '0';
+            svgElement.style.width = '100%';
+            svgElement.style.height = '100%';
+            svgElement.style.pointerEvents = 'none';
+            svgElement.style.zIndex = '400';
+            svgElement.classList.add('grid-overlay');
+            
+            // Add to map container
+            var mapContainer = map.getContainer();
+            mapContainer.appendChild(svgElement);
+            
+            gridOverlay = svgElement;
+        }
+        
+        function updateGrid() {
+            if (!map || !gridOverlay) return;
+            
+            // Clear existing grid
+            gridOverlay.innerHTML = '';
+            
+            // Get current map bounds and zoom
+            var bounds = map.getBounds();
+            var zoom = map.getZoom();
+            
+            // Show grid at zoom level 2 and above
+            if (zoom < 2) return;
+            
+            // Calculate visible tiles
+            var visibleTiles = getVisibleTiles(bounds);
+            
+            // Draw grid cells
+            visibleTiles.forEach(function(tile) {
+                drawGridCell(tile.x, tile.y);
+            });
+        }
+        
+        function getVisibleTiles(bounds) {
+            var tiles = [];
+            
+            // Convert bounds to tile coordinates (zoom 7)
+            var nw = latLonToTile(bounds.getNorth(), bounds.getWest());
+            var se = latLonToTile(bounds.getSouth(), bounds.getEast());
+            
+            // Clamp to valid tile range (0-127 for zoom 7)
+            var minX = Math.max(0, nw.x);
+            var maxX = Math.min(127, se.x);
+            var minY = Math.max(0, nw.y);
+            var maxY = Math.min(127, se.y);
+            
+            for (var x = minX; x <= maxX; x++) {
+                for (var y = minY; y <= maxY; y++) {
+                    tiles.push({x: x, y: y});
+                }
+            }
+            
+            return tiles;
+        }
+        
+        function latLonToTile(lat, lon) {
+            var zoom = 7;
+            var latRad = lat * Math.PI / 180;
+            var n = Math.pow(2, zoom);
+            var x = Math.floor((lon + 180) / 360 * n);
+            var y = Math.floor((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2 * n);
+            return {x: x, y: y};
+        }
+        
+        function tileToLatLon(x, y) {
+            var zoom = 7;
+            var n = Math.pow(2, zoom);
+            
+            var west = x / n * 360 - 180;
+            var east = (x + 1) / n * 360 - 180;
+            
+            var northRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+            var southRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n)));
+            
+            var north = northRad * 180 / Math.PI;
+            var south = southRad * 180 / Math.PI;
+            
+            return {north: north, south: south, east: east, west: west};
+        }
+        
+        function drawGridCell(tileX, tileY) {
+            var bounds = tileToLatLon(tileX, tileY);
+            
+            // Convert lat/lon to pixel coordinates
+            var nw = map.latLngToContainerPoint([bounds.north, bounds.west]);
+            var se = map.latLngToContainerPoint([bounds.south, bounds.east]);
+            
+            // Calculate stroke width based on zoom level
+            var zoom = map.getZoom();
+            var strokeWidth = Math.max(1, Math.min(3, zoom - 1));
+            
+            // Create rectangle
+            var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', nw.x);
+            rect.setAttribute('y', nw.y);
+            rect.setAttribute('width', se.x - nw.x);
+            rect.setAttribute('height', se.y - nw.y);
+            rect.setAttribute('stroke-width', strokeWidth);
+            rect.classList.add('grid-cell');
+            rect.id = 'tile_' + tileX + '_' + tileY;
+            
+            // Check if tile is selected
+            var tileId = tileX + ',' + tileY;
+            if (selectedTiles.has(tileId)) {
+                rect.classList.add('selected');
+            }
+            
+            // Add click handler
+            rect.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleTile(tileX, tileY);
+            });
+            
+            // Add tooltip with geographic info
+            var latStr = bounds.north.toFixed(3) + '° to ' + bounds.south.toFixed(3) + '°N';
+            var lonStr = bounds.west.toFixed(3) + '° to ' + bounds.east.toFixed(3) + '°E';
+            rect.innerHTML = '<title>Tile (' + tileX + ', ' + tileY + ')\\n' + latStr + ', ' + lonStr + '\\nClick to select</title>';
+            
+            gridOverlay.appendChild(rect);
+        }
+        
+        function toggleTile(tileX, tileY) {
+            var tileId = tileX + ',' + tileY;
+            var element = document.getElementById('tile_' + tileX + '_' + tileY);
+            
+            if (selectedTiles.has(tileId)) {
+                selectedTiles.delete(tileId);
+                if (element) element.classList.remove('selected');
+            } else {
+                selectedTiles.add(tileId);
+                if (element) element.classList.add('selected');
+            }
+            
+            updateSelectedTilesList();
+            updateCommands();
+        }
+        
+        function updateSelectedTilesList() {
+            var listElement = document.getElementById('selected-tiles-list');
+            if (selectedTiles.size === 0) {
+                listElement.innerHTML = 'No tiles selected';
+            } else {
+                var tiles = Array.from(selectedTiles).sort();
+                listElement.innerHTML = tiles.map(tile => {
+                    var [tileX, tileY] = tile.split(',').map(Number);
+                    var bounds = tileToLatLon(tileX, tileY);
+                    var latStr = bounds.north.toFixed(3) + '° to ' + bounds.south.toFixed(3) + '°N';
+                    var lonStr = bounds.west.toFixed(3) + '° to ' + bounds.east.toFixed(3) + '°E';
+                    return '<div class="tile-info">Tile (' + tile + ')<br><small>' + latStr + ', ' + lonStr + '</small></div>';
+                }).join('');
+            }
+            
+            document.getElementById('tile-count').textContent = selectedTiles.size;
+        }
+        
+        function updateCommands() {
+            var commandsElement = document.getElementById('commands-output');
+            if (selectedTiles.size === 0) {
+                commandsElement.textContent = 'Select tiles to see commands';
+            } else {
+                var commands = Array.from(selectedTiles).sort().map(tile => {
+                    var [tileX, tileY] = tile.split(',').map(Number);
+                    return generateMBTilesCommand(tileX, tileY);
+                });
+                commandsElement.textContent = commands.join('\n');
+            }
+        }
+        
+        function generateMBTilesCommand(tileX, tileY) {
+            return 'python run_map_tile_proper.py ' + tileX + ' ' + tileY + ' tile_' + tileX + '_' + tileY;
+        }
+        
+        function clearSelection() {
+            selectedTiles.forEach(tile => {
+                var [tileX, tileY] = tile.split(',').map(Number);
+                var element = document.getElementById('tile_' + tileX + '_' + tileY);
+                if (element) element.classList.remove('selected');
+            });
+            selectedTiles.clear();
+            updateSelectedTilesList();
+            updateCommands();
+        }
+        
+        function copyCommands() {
+            var commandsElement = document.getElementById('commands-output');
+            var text = commandsElement.textContent;
+            
+            if (text && text !== 'Select tiles to see commands') {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Visual feedback
+                    var button = event.target;
+                    var originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.style.backgroundColor = '#28a745';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '#007bff';
+                    }, 2000);
+                }).catch(err => {
+                    // Fallback for older browsers
+                    var textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert('Commands copied to clipboard!');
+                });
+            } else {
+                alert('Please select some tiles first!');
+            }
+        }
+        
+        function updateZoomInfo() {
+            document.getElementById('current-zoom').textContent = map.getZoom();
+        }
+        
+        function generateMultiTileCommand() {
+            var nameInput = document.getElementById('mbtiles-name');
+            var maxZoomSelect = document.getElementById('max-zoom');
+            var outputElement = document.getElementById('multi-command-output');
+            
+            var name = nameInput.value.trim();
+            var maxZoom = maxZoomSelect.value;
+            
+            if (selectedTiles.size === 0) {
+                outputElement.textContent = 'Please select some tiles first!';
+                return;
+            }
+            
+            if (!name) {
+                outputElement.textContent = 'Please enter a name for the MBTiles file!';
+                return;
+            }
+            
+            // Generate tile list
+            var tiles = Array.from(selectedTiles).sort().map(tile => {
+                var [tileX, tileY] = tile.split(',').map(Number);
+                return tileX + ',' + tileY;
+            });
+            
+            var command = 'python run_multi_tile_mbtiles.py --name ' + name + ' --max-zoom ' + maxZoom + ' --tiles ' + tiles.join(' ');
+            
+            outputElement.textContent = command;
+        }
+        
+        function copyMultiTileCommand() {
+            var commandsElement = document.getElementById('multi-command-output');
+            var text = commandsElement.textContent;
+            
+            if (text && text !== 'Select tiles and enter name to generate multi-tile command') {
+                navigator.clipboard.writeText(text).then(() => {
+                    // Visual feedback
+                    var button = event.target;
+                    var originalText = button.textContent;
+                    button.textContent = 'Copied!';
+                    button.style.backgroundColor = '#28a745';
+                    
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                        button.style.backgroundColor = '#007bff';
+                    }, 2000);
+                }).catch(err => {
+                    // Fallback for older browsers
+                    var textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    alert('Multi-tile command copied to clipboard!');
+                });
+            } else {
+                alert('Please select some tiles first!');
+            }
+        }
+        
+        function switchLayer(layer) {
+            if (layer === 'osm') {
+                currentLayer.remove();
+                currentLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18
+                }).addTo(map);
+            } else if (layer === 'google') {
+                currentLayer.remove();
+                currentLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=p@176103410&x={x}&y={y}&z={z}&s=Galileo&hl=en&scale=2', {
+                    attribution: '© Google Maps',
+                    maxZoom: 20,
+                    subdomains: ['0', '1', '2', '3']
+                }).addTo(map);
+            }
+            updateGrid();
+        }
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html> 

@@ -170,17 +170,19 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file, hillshad
                 
                 # Using caching for OSM tiles
                 osm_data = get_tile(zoom, x, y, osm_server, "osm")
-                # Instead of downloading a terrain tile, fetch the hillshade tile from the local MBTiles.
-                flipped_y = (2**zoom - 1) - y
+                # Fetch the hillshade tile from the local MBTiles.
+                # The hillshade MBTiles stores tiles with TMS coordinates (Y flipped),
+                # so we need to convert from standard web mercator Y to TMS Y for lookup.
+                hillshade_tms_y = (2**zoom - 1) - y
                 hillshade_cursor.execute(
                     "SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?",
-                    (zoom, x, flipped_y)
+                    (zoom, x, hillshade_tms_y)
                 )
                 result = hillshade_cursor.fetchone()
                 if result:
                     hillshade_data = result[0]
                 else:
-                    print(f"Hillshade tile not found for z{zoom}/x{x}/y{y}")
+                    print(f"Hillshade tile not found for z{zoom}/x{x}/y{y} (TMS y={hillshade_tms_y})")
                     hillshade_data = None
                 
                 if osm_data and hillshade_data:
@@ -201,10 +203,11 @@ def download_and_combine_region(bbox, min_zoom, max_zoom, mbtiles_file, hillshad
                     final_img.save(output, format='JPEG', quality=85)
                     tile_data = output.getvalue()
                     
-                    # MBTiles uses a flipped y coordinate for storage
+                    # MBTiles uses TMS coordinates for storage (Y flipped)
+                    final_tms_y = (2**zoom - 1) - y
                     cursor.execute(
                         "INSERT OR REPLACE INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)",
-                        (zoom, x, flipped_y, tile_data)
+                        (zoom, x, final_tms_y, tile_data)
                     )
         
         conn.commit()
